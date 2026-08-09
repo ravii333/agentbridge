@@ -92,6 +92,47 @@ function updateStatus(newStatus) {
   status = { ...status, ...newStatus, updatedAt: new Date().toISOString() };
 }
 
+async function listRuns(limit = 50) {
+  const runs = await Log.aggregate([
+    { $match: { runId: { $ne: null } } },
+    { $sort: { createdAt: 1, seq: 1 } },
+    {
+      $group: {
+        _id: '$runId',
+        startedAt: { $first: '$createdAt' },
+        endedAt: { $last: '$createdAt' },
+        logCount: { $sum: 1 },
+        firstKind: { $first: '$kind' },
+        lastKind: { $last: '$kind' },
+        lastData: { $last: '$data' },
+      },
+    },
+    { $sort: { startedAt: -1 } },
+    { $limit: limit },
+  ]);
+
+  return runs.map((run) => ({
+    runId: run._id,
+    startedAt: run.startedAt,
+    endedAt: run.endedAt,
+    logCount: run.logCount,
+    finished: run.lastKind === 'run_finished',
+    ok: run.lastKind === 'run_finished' ? run.lastData?.ok !== false : undefined,
+    summary: run.lastKind === 'run_finished' ? run.lastData?.summary : undefined,
+  }));
+}
+
+async function getRunLogs(runId) {
+  const logs = await Log.find({ runId }).sort({ seq: 1, createdAt: 1 }).lean();
+  return logs.map((log) => ({
+    kind: log.kind,
+    data: log.data,
+    runId: log.runId,
+    seq: log.seq,
+    timestamp: log.createdAt,
+  }));
+}
+
 export {
   setIo,
   setAgentSocket,
@@ -100,4 +141,6 @@ export {
   forwardCommand,
   forwardCancel,
   updateStatus,
+  listRuns,
+  getRunLogs,
 };
