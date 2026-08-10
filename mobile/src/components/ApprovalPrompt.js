@@ -1,6 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, radii } from '../theme.js';
 import Button from './Button.js';
+import DiffView from './DiffView.js';
+import isDiffable from '../utils/isDiffableTool.js';
 
 function summarizeInput(tool, input) {
   if (!input) return '';
@@ -15,7 +18,11 @@ function summarizeInput(tool, input) {
 }
 
 function ApprovalPrompt({ approval, onApprove, onDeny }) {
+  const [showDiff, setShowDiff] = useState(false);
+
   if (!approval) return null;
+
+  const diffable = isDiffable(approval.tool, approval.input);
 
   return (
     <View style={styles.box}>
@@ -23,6 +30,16 @@ function ApprovalPrompt({ approval, onApprove, onDeny }) {
       <Text style={styles.detail} numberOfLines={4}>
         {summarizeInput(approval.tool, approval.input)}
       </Text>
+
+      {diffable && (
+        <View>
+          <Pressable onPress={() => setShowDiff((v) => !v)}>
+            <Text style={styles.toggle}>{showDiff ? '▾ hide changes' : '▸ view changes'}</Text>
+          </Pressable>
+          {showDiff && <DiffView input={approval.input} />}
+        </View>
+      )}
+
       <View style={styles.actions}>
         <Button label="Deny" variant="secondary" onPress={() => onDeny(approval.approvalId)} />
         <Button label="Approve" onPress={() => onApprove(approval.approvalId)} />
@@ -51,6 +68,12 @@ const styles = StyleSheet.create({
     color: colors.textDim,
     fontFamily: fonts.mono,
     fontSize: 12,
+  },
+  toggle: {
+    color: colors.accent,
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    marginBottom: 6,
   },
   actions: {
     flexDirection: 'row',
