@@ -2,6 +2,8 @@ import { spawn, execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import config from './config.js';
+import * as workspace from './workspace.js';
+import * as approvalServer from './approvalServer.js';
 
 let logCallback = () => {};
 let statusCallback = () => {};
@@ -45,7 +47,7 @@ function getStatus() {
     sessionId,
     currentRunId,
     queueDepth: queue.length,
-    cwd: config.AGENT_CWD,
+    cwd: workspace.getWorkspace(),
     model: config.CLAUDE_MODEL || undefined,
     lastError: lastError || undefined,
     updatedAt: new Date().toISOString(),
@@ -70,14 +72,8 @@ function checkClaudeBinary() {
 }
 
 async function start() {
-  if (!config.AGENT_CWD) {
-    lastError = { message: 'AGENT_CWD is not set', at: new Date().toISOString() };
-    setState('error');
-    throw new Error('AGENT_CWD env var is required');
-  }
-
-  if (!existsSync(config.AGENT_CWD)) {
-    lastError = { message: `AGENT_CWD does not exist: ${config.AGENT_CWD}`, at: new Date().toISOString() };
+  if (!existsSync(workspace.getWorkspace())) {
+    lastError = { message: `Workspace does not exist: ${workspace.getWorkspace()}`, at: new Date().toISOString() };
     setState('error');
     throw new Error(lastError.message);
   }
@@ -138,6 +134,11 @@ function runJob({ runId, command }) {
       '--permission-mode', config.PERMISSION_MODE,
     ];
 
+    const settingsPath = approvalServer.getSettingsPath();
+    if (settingsPath) {
+      args.push('--settings', settingsPath);
+    }
+
     if (sessionId) {
       args.push('--resume', sessionId);
     }
@@ -147,7 +148,7 @@ function runJob({ runId, command }) {
     }
 
     const child = spawn(config.CLAUDE_BIN, args, {
-      cwd: config.AGENT_CWD,
+      cwd: workspace.getWorkspace(),
       shell: process.platform === 'win32',
       windowsHide: true,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -293,6 +294,11 @@ async function shutdown() {
   setState('offline');
 }
 
+function resetSession() {
+  sessionId = null;
+  emitStatus();
+}
+
 export {
   start,
   sendCommand,
@@ -301,4 +307,5 @@ export {
   onLog,
   onStatus,
   shutdown,
+  resetSession,
 };

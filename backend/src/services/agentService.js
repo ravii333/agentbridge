@@ -3,6 +3,10 @@ import Log from '../models/logModel.js';
 
 let io = null;
 let agentSocket = null;
+
+function getAgentSocket() {
+  return agentSocket;
+}
 let status = {
   state: 'offline',
   sessionId: null,
@@ -88,6 +92,12 @@ function forwardCancel(runId) {
   }
 }
 
+function forwardApprovalResponse(payload) {
+  if (agentSocket) {
+    agentSocket.emit('agent:approval-response', payload);
+  }
+}
+
 function updateStatus(newStatus) {
   status = { ...status, ...newStatus, updatedAt: new Date().toISOString() };
 }
@@ -136,10 +146,12 @@ async function getRunLogs(runId) {
 export {
   setIo,
   setAgentSocket,
+  getAgentSocket,
   getStatus,
   saveLog,
   forwardCommand,
   forwardCancel,
+  forwardApprovalResponse,
   updateStatus,
   listRuns,
   getRunLogs,

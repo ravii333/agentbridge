@@ -15,6 +15,7 @@ export function AgentProvider({ children }) {
   const [socket, setSocket] = useState(null);
   const [commandError, setCommandError] = useState(null);
   const [recentCommands, setRecentCommands] = useState([]);
+  const [pendingApprovals, setPendingApprovals] = useState([]);
 
   useEffect(() => {
     const client = createSocket();
@@ -31,10 +32,17 @@ export function AgentProvider({ children }) {
 
     client.on('agent:log', (logEvent) => {
       setCommandError(null);
+      if (logEvent.kind === 'run_started') {
+        setPendingApprovals([]);
+      }
       setLogs((current) => [
         ...current,
         { ...logEvent, timestamp: logEvent.ts || new Date().toISOString() },
       ]);
+    });
+
+    client.on('agent:approval-request', (request) => {
+      setPendingApprovals((current) => [...current, request]);
     });
 
     client.on('agent:status', (agentStatus) => {
@@ -65,13 +73,53 @@ export function AgentProvider({ children }) {
     setRecentCommands((current) => [command, ...current.filter((c) => c !== command)].slice(0, 3));
   };
 
+  const respondApproval = (approvalId, approved) => {
+    if (!socket) return;
+    socket.emit('frontend:approval-response', { approvalId, approved });
+    setPendingApprovals((current) => current.filter((item) => item.approvalId !== approvalId));
+  };
+
+  const browseWorkspace = (path) =>
+    new Promise((resolve, reject) => {
+      if (!socket) {
+        reject(new Error('Not connected'));
+        return;
+      }
+      socket.emit('frontend:workspace-browse', { path }, (result) => {
+        if (result?.error) {
+          reject(new Error(result.error));
+        } else {
+          resolve(result);
+        }
+      });
+    });
+
+  const setWorkspace = (path) =>
+    new Promise((resolve, reject) => {
+      if (!socket) {
+        reject(new Error('Not connected'));
+        return;
+      }
+      socket.emit('frontend:workspace-set', { path }, (result) => {
+        if (result?.error) {
+          reject(new Error(result.error));
+        } else {
+          resolve(result);
+        }
+      });
+    });
+
   const value = {
     status,
     logs,
     activity,
     commandError,
     recentCommands,
+    pendingApprovals,
     sendCommand,
+    respondApproval,
+    browseWorkspace,
+    setWorkspace,
   };
 
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;

@@ -3,10 +3,12 @@ import { randomUUID } from 'node:crypto';
 import {
   setIo,
   setAgentSocket,
+  getAgentSocket,
   saveLog,
   updateStatus,
   forwardCommand,
   forwardCancel,
+  forwardApprovalResponse,
 } from '../services/agentService.js';
 import { isValidSocketToken } from '../utils/auth.js';
 import { info } from '../utils/logger.js';
@@ -65,6 +67,32 @@ function attach(server) {
 
     socket.on('frontend:cancel', ({ runId } = {}) => {
       forwardCancel(runId);
+    });
+
+    socket.on('frontend:workspace-browse', (payload, ack) => {
+      const agentSocket = getAgentSocket();
+      if (!agentSocket) {
+        ack?.({ error: 'Agent not connected' });
+        return;
+      }
+      agentSocket.emit('frontend:workspace-browse', payload, (result) => ack?.(result));
+    });
+
+    socket.on('frontend:workspace-set', (payload, ack) => {
+      const agentSocket = getAgentSocket();
+      if (!agentSocket) {
+        ack?.({ error: 'Agent not connected' });
+        return;
+      }
+      agentSocket.emit('frontend:workspace-set', payload, (result) => ack?.(result));
+    });
+
+    socket.on('agent:approval-request', (payload) => {
+      io.emit('agent:approval-request', payload);
+    });
+
+    socket.on('frontend:approval-response', (payload) => {
+      forwardApprovalResponse(payload);
     });
 
     socket.on('disconnect', (reason) => {

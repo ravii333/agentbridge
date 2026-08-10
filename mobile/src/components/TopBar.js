@@ -1,13 +1,31 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../theme.js';
 import StatusChip from './StatusChip.js';
 
-function TopBar({ state }) {
+function shortenPath(cwd) {
+  if (!cwd) return null;
+  const parts = cwd.split(/[\\/]/).filter(Boolean);
+  return parts.length > 2 ? `…/${parts.slice(-2).join('/')}` : cwd;
+}
+
+function TopBar({ state, cwd, onPressWorkspace }) {
+  const label = shortenPath(cwd);
+
   return (
-    <View style={styles.bar}>
-      <Text style={styles.mark}>{'{ }'}</Text>
-      <Text style={styles.title}>agentbridge</Text>
-      <StatusChip state={state} />
+    <View>
+      <View style={styles.bar}>
+        <Text style={styles.mark}>{'{ }'}</Text>
+        <Text style={styles.title}>agentbridge</Text>
+        <StatusChip state={state} />
+      </View>
+
+      {onPressWorkspace && (
+        <Pressable style={styles.workspaceRow} onPress={onPressWorkspace}>
+          <Text style={styles.workspaceLabel} numberOfLines={1}>
+            {label || 'select workspace'}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -32,6 +50,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+  },
+  workspaceRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  workspaceLabel: {
+    color: colors.accent,
+    fontFamily: fonts.mono,
+    fontSize: 12,
   },
 });
 

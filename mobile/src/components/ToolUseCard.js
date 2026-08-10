@@ -1,6 +1,19 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { colors, fonts, radii } from '../theme.js';
+import DiffView from './DiffView.js';
+
+const DIFF_TOOLS = new Set(['Edit', 'MultiEdit', 'Write']);
+
+function isDiffable(tool, input) {
+  if (!DIFF_TOOLS.has(tool)) return false;
+  return (
+    Array.isArray(input?.edits) ||
+    typeof input?.old_string === 'string' ||
+    typeof input?.new_string === 'string' ||
+    typeof input?.content === 'string'
+  );
+}
 
 function formatBlock(value) {
   if (value === undefined || value === null) return '';
@@ -39,10 +52,14 @@ function ToolUseCard({ tool, input, result }) {
       {open && (
         <View style={styles.body}>
           <View>
-            <Text style={styles.label}>input:</Text>
-            <ScrollView horizontal style={styles.pre}>
-              <Text style={styles.preText}>{formatBlock(input)}</Text>
-            </ScrollView>
+            <Text style={styles.label}>{isDiffable(tool, input) ? 'changes:' : 'input:'}</Text>
+            {isDiffable(tool, input) ? (
+              <DiffView input={input} />
+            ) : (
+              <ScrollView horizontal style={styles.pre}>
+                <Text style={styles.preText}>{formatBlock(input)}</Text>
+              </ScrollView>
+            )}
           </View>
 
           {result && (
