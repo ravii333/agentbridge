@@ -15,8 +15,8 @@ function LiveFeedScreen() {
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={80}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
         <View style={styles.feed}>
           <LogFeed logs={logs} autoScroll />

@@ -4,6 +4,7 @@ import { colors, fonts, radii } from '../theme.js';
 
 function Composer({ onSend, error, recent = [] }) {
   const [command, setCommand] = useState('');
+  const [focused, setFocused] = useState(false);
 
   const send = (value) => {
     const trimmed = value.trim();
@@ -26,12 +27,14 @@ function Composer({ onSend, error, recent = [] }) {
         </ScrollView>
       )}
 
-      <View style={styles.bar}>
+      <View style={[styles.bar, focused && styles.barFocused]}>
         <Text style={styles.prompt}>&gt;</Text>
         <TextInput
           style={styles.input}
           value={command}
           onChangeText={setCommand}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholder="send a command"
           placeholderTextColor={colors.textFaint}
         />
@@ -64,6 +67,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     paddingHorizontal: 14,
     paddingVertical: 6,
+  },
+  barFocused: {
+    borderColor: colors.accent,
   },
   prompt: {
     color: colors.textFaint,
