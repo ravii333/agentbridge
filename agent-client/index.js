@@ -3,12 +3,14 @@ import * as socketClient from './socketClient.js';
 import * as agentRunner from './agentRunner.js';
 import * as workspace from './workspace.js';
 import * as approvalServer from './approvalServer.js';
+import * as pairing from './pairing.js';
 import config from './config.js';
 
 const agentId = `${os.hostname()}-${process.pid}`;
 
 async function startAgentClient() {
-  const socket = socketClient.connect();
+  const { agentToken } = await pairing.getCredentials();
+  const socket = socketClient.connect(agentToken);
 
   approvalServer.init({ socket, getCurrentRunId: () => agentRunner.getStatus().currentRunId });
   try {

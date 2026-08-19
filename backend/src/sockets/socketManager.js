@@ -11,7 +11,15 @@ import {
   forwardApprovalResponse,
 } from '../services/agentService.js';
 import { isValidSocketToken } from '../utils/auth.js';
+import { hashToken } from '../controllers/agentPairingController.js';
+import Agent from '../models/agentModel.js';
 import { info } from '../utils/logger.js';
+
+async function resolvePairedAgent(token) {
+  if (!token) return null;
+  const agent = await Agent.findOne({ tokenHash: hashToken(token), status: 'claimed' });
+  return agent;
+}
 
 let io;
 
@@ -25,12 +33,25 @@ function attach(server) {
 
   setIo(io);
 
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
-    if (!isValidSocketToken(token)) {
+
+    if (isValidSocketToken(token)) {
+      return next();
+    }
+
+    try {
+      const agent = await resolvePairedAgent(token);
+      if (agent) {
+        socket.data.agentId = agent._id.toString();
+        socket.data.userId = agent.userId ? agent.userId.toString() : null;
+        return next();
+      }
+    } catch (error) {
       return next(new Error('Unauthorized'));
     }
-    next();
+
+    next(new Error('Unauthorized'));
   });
 
   io.on('connection', (socket) => {
