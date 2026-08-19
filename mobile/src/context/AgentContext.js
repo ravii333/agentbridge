@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { createSocket } from '../api/socket.js';
+import { useAuth } from './AuthContext.js';
 import latestActivity from '../utils/latestActivity.js';
 
 const REJECT_REASONS = {
@@ -10,6 +11,7 @@ const REJECT_REASONS = {
 const AgentContext = createContext(null);
 
 export function AgentProvider({ children }) {
+  const { token } = useAuth();
   const [status, setStatus] = useState({ state: 'connecting', sessionId: null, currentRunId: null, updatedAt: null });
   const [logs, setLogs] = useState([]);
   const [socket, setSocket] = useState(null);
@@ -18,7 +20,13 @@ export function AgentProvider({ children }) {
   const [pendingApprovals, setPendingApprovals] = useState([]);
 
   useEffect(() => {
-    const client = createSocket();
+    if (!token) {
+      setSocket(null);
+      setStatus((current) => ({ ...current, state: 'offline' }));
+      return undefined;
+    }
+
+    const client = createSocket(token);
     setSocket(client);
 
     client.on('connect', () => {
@@ -62,7 +70,7 @@ export function AgentProvider({ children }) {
     return () => {
       client.disconnect();
     };
-  }, []);
+  }, [token]);
 
   const activity = useMemo(() => latestActivity(logs), [logs]);
 

@@ -8,7 +8,7 @@ function shortenPath(cwd) {
   return parts.length > 2 ? `…/${parts.slice(-2).join('/')}` : cwd;
 }
 
-function TopBar({ state, cwd, onPressWorkspace }) {
+function TopBar({ state, cwd, onPressWorkspace, onPressAddAgent }) {
   const label = shortenPath(cwd);
 
   return (
@@ -16,6 +16,11 @@ function TopBar({ state, cwd, onPressWorkspace }) {
       <View style={styles.bar}>
         <Text style={styles.mark}>{'{ }'}</Text>
         <Text style={styles.title}>agentbridge</Text>
+        {onPressAddAgent && (
+          <Pressable onPress={onPressAddAgent} hitSlop={8}>
+            <Text style={styles.addAgent}>+ agent</Text>
+          </Pressable>
+        )}
         <StatusChip state={state} />
       </View>
 
@@ -50,6 +55,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+  },
+  addAgent: {
+    color: colors.accent,
+    fontFamily: fonts.mono,
+    fontSize: 12,
   },
   workspaceRow: {
     paddingHorizontal: 16,

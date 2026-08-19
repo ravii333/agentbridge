@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAgent } from '../context/AgentContext.js';
@@ -10,6 +11,7 @@ import WorkspacePicker from '../components/WorkspacePicker.js';
 import { colors } from '../theme.js';
 
 function LiveFeedScreen() {
+  const navigation = useNavigation();
   const {
     status,
     logs,
@@ -25,7 +27,12 @@ function LiveFeedScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <TopBar state={status?.state} cwd={status?.cwd} onPressWorkspace={() => setPickerVisible(true)} />
+      <TopBar
+        state={status?.state}
+        cwd={status?.cwd}
+        onPressWorkspace={() => setPickerVisible(true)}
+        onPressAddAgent={() => navigation.navigate('AddAgent')}
+      />
 
       <KeyboardAvoidingView
         style={styles.flex}

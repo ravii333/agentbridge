@@ -4,6 +4,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchRuns } from '../api/rest.js';
 import { useAgent } from '../context/AgentContext.js';
+import { useAuth } from '../context/AuthContext.js';
 import TopBar from '../components/TopBar.js';
 import EmptyState from '../components/EmptyState.js';
 import { colors, fonts } from '../theme.js';
@@ -18,6 +19,7 @@ const STATUS_COLOR = { ok: colors.success, failed: colors.error, incomplete: col
 function HistoryScreen() {
   const navigation = useNavigation();
   const { status } = useAgent();
+  const { token } = useAuth();
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,7 +27,7 @@ function HistoryScreen() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchRuns()
+    fetchRuns(token)
       .then(({ runs: fetched }) => {
         if (!cancelled) setRuns(fetched);
       })
@@ -39,7 +41,7 @@ function HistoryScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [token]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>

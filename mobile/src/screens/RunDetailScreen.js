@@ -3,12 +3,14 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchRunLogs } from '../api/rest.js';
+import { useAuth } from '../context/AuthContext.js';
 import LogFeed from '../components/LogFeed.js';
 import { colors, fonts } from '../theme.js';
 
 function RunDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { token } = useAuth();
   const { runId } = route.params;
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState(null);
@@ -16,7 +18,7 @@ function RunDetailScreen() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchRunLogs(runId)
+    fetchRunLogs(token, runId)
       .then(({ logs: fetched }) => {
         if (!cancelled) setLogs(fetched);
       })
@@ -27,7 +29,7 @@ function RunDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [runId]);
+  }, [token, runId]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
