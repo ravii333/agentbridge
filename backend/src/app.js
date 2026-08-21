@@ -3,14 +3,15 @@ import cors from 'cors';
 import agentRoutes from './routes/agentRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import agentPairingRoutes from './routes/agentPairingRoutes.js';
-import { requireToken } from './utils/auth.js';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/agent', requireToken, agentRoutes);
+// Auth is applied per-route inside agentRoutes.js: legacy shared-secret
+// endpoints vs. JWT-scoped per-user run history.
+app.use('/api/agent', agentRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/agents', agentPairingRoutes);
 

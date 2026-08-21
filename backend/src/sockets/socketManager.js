@@ -1,9 +1,12 @@
 import { Server } from 'socket.io';
 import { randomUUID } from 'node:crypto';
 import {
+  LEGACY_AGENT_ID,
   setIo,
-  setAgentSocket,
+  registerAgent,
   getAgentSocket,
+  resolveAgentId,
+  getStatus,
   saveLog,
   updateStatus,
   forwardCommand,
@@ -12,16 +15,42 @@ import {
 } from '../services/agentService.js';
 import { isValidSocketToken } from '../utils/auth.js';
 import { hashToken } from '../controllers/agentPairingController.js';
+import { verify } from '../utils/jwt.js';
 import Agent from '../models/agentModel.js';
 import { info } from '../utils/logger.js';
 
+let io;
+
 async function resolvePairedAgent(token) {
   if (!token) return null;
-  const agent = await Agent.findOne({ tokenHash: hashToken(token), status: 'claimed' });
-  return agent;
+  return Agent.findOne({ tokenHash: hashToken(token), status: 'claimed' });
 }
 
-let io;
+async function authenticate(socket) {
+  const { token, clientType } = socket.handshake.auth || {};
+
+  if (clientType === 'agent') {
+    if (isValidSocketToken(token)) {
+      return { agentId: LEGACY_AGENT_ID, userId: null };
+    }
+    const agent = await resolvePairedAgent(token);
+    if (agent) {
+      return { agentId: agent._id.toString(), userId: agent.userId ? agent.userId.toString() : null };
+    }
+    return null;
+  }
+
+  // frontend/mobile client
+  try {
+    const payload = verify(token);
+    return { agentId: null, userId: payload.sub };
+  } catch {
+    if (isValidSocketToken(token)) {
+      return { agentId: null, userId: null };
+    }
+    return null;
+  }
+}
 
 function attach(server) {
   io = new Server(server, {
@@ -33,65 +62,72 @@ function attach(server) {
 
   setIo(io);
 
-  io.use(async (socket, next) => {
-    const token = socket.handshake.auth?.token;
-
-    if (isValidSocketToken(token)) {
-      return next();
-    }
-
-    try {
-      const agent = await resolvePairedAgent(token);
-      if (agent) {
-        socket.data.agentId = agent._id.toString();
-        socket.data.userId = agent.userId ? agent.userId.toString() : null;
-        return next();
-      }
-    } catch (error) {
-      return next(new Error('Unauthorized'));
-    }
-
-    next(new Error('Unauthorized'));
+  io.use((socket, next) => {
+    authenticate(socket)
+      .then((identity) => {
+        if (!identity) return next(new Error('Unauthorized'));
+        socket.data.agentId = identity.agentId;
+        socket.data.userId = identity.userId;
+        next();
+      })
+      .catch(() => next(new Error('Unauthorized')));
   });
 
   io.on('connection', (socket) => {
-    info('Socket connected', { id: socket.id });
+    const { agentId, userId } = socket.data;
+    socket.join(userId ? `user:${userId}` : 'legacy');
+    if (agentId) socket.join(`agent:${agentId}`);
+
+    info('Socket connected', { id: socket.id, agentId, userId });
 
     socket.on('agent:ready', (agentInfo) => {
-      setAgentSocket(socket);
-      info('Agent client registered', agentInfo);
+      if (!agentId) return;
+      registerAgent({ agentId, userId, socket });
+      info('Agent client registered', { agentId, userId, ...agentInfo });
     });
 
     socket.on('frontend:ready', () => {
-      info('Frontend client connected');
+      info('Frontend client connected', { userId });
     });
 
     socket.on('agent:log', async (logEvent) => {
-      await saveLog(logEvent);
-      io.emit('agent:log', logEvent);
+      if (!agentId) return;
+      await saveLog(agentId, userId, logEvent);
+      io.to(userId ? `user:${userId}` : 'legacy').emit('agent:log', logEvent);
     });
 
     socket.on('agent:status', (status) => {
-      updateStatus(status);
-      io.emit('agent:status', status);
+      if (!agentId) return;
+      updateStatus(agentId, status);
     });
 
     socket.on('agent:ack', (ack) => {
-      io.emit('agent:ack', ack);
+      io.to(userId ? `user:${userId}` : 'legacy').emit('agent:ack', ack);
     });
 
     socket.on('frontend:command', (command) => {
       const runId = randomUUID();
-      info('Frontend command received', { command, runId });
-      forwardCommand(command, runId);
+      info('Frontend command received', { command, runId, userId });
+      forwardCommand(userId, command, runId);
     });
 
     socket.on('frontend:cancel', ({ runId } = {}) => {
-      forwardCancel(runId);
+      forwardCancel(userId, runId);
+    });
+
+    socket.on('agent:sync', () => {
+      const targetAgentId = resolveAgentId(userId);
+      const agentSocket = targetAgentId && getAgentSocket(targetAgentId);
+      if (agentSocket) {
+        agentSocket.emit('agent:sync');
+      } else {
+        socket.emit('agent:status', getStatus(targetAgentId));
+      }
     });
 
     socket.on('frontend:workspace-browse', (payload, ack) => {
-      const agentSocket = getAgentSocket();
+      const targetAgentId = resolveAgentId(userId);
+      const agentSocket = targetAgentId && getAgentSocket(targetAgentId);
       if (!agentSocket) {
         ack?.({ error: 'Agent not connected' });
         return;
@@ -100,7 +136,8 @@ function attach(server) {
     });
 
     socket.on('frontend:workspace-set', (payload, ack) => {
-      const agentSocket = getAgentSocket();
+      const targetAgentId = resolveAgentId(userId);
+      const agentSocket = targetAgentId && getAgentSocket(targetAgentId);
       if (!agentSocket) {
         ack?.({ error: 'Agent not connected' });
         return;
@@ -109,11 +146,12 @@ function attach(server) {
     });
 
     socket.on('agent:approval-request', (payload) => {
-      io.emit('agent:approval-request', payload);
+      if (!agentId) return;
+      io.to(userId ? `user:${userId}` : 'legacy').emit('agent:approval-request', payload);
     });
 
     socket.on('frontend:approval-response', (payload) => {
-      forwardApprovalResponse(payload);
+      forwardApprovalResponse(userId, payload);
     });
 
     socket.on('disconnect', (reason) => {

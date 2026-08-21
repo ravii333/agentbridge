@@ -1,11 +1,15 @@
 import express from 'express';
-const router = express.Router();
 import { getStatus, sendCommand, getRuns, getRun } from '../controllers/agentController.js';
+import { requireToken, requireUser } from '../utils/auth.js';
 
-// Basic REST endpoint for agent status and command forwarding
-router.get('/status', getStatus);
-router.post('/command', sendCommand);
-router.get('/runs', getRuns);
-router.get('/runs/:runId', getRun);
+const router = express.Router();
+
+// Legacy shared-secret endpoints (single global dev/dashboard agent).
+router.get('/status', requireToken, getStatus);
+router.post('/command', requireToken, sendCommand);
+
+// Per-user run history — mobile authenticates these with its JWT, not the shared secret.
+router.get('/runs', requireUser, getRuns);
+router.get('/runs/:runId', requireUser, getRun);
 
 export default router;

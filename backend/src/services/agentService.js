@@ -1,45 +1,78 @@
 import Command from '../models/commandModel.js';
 import Log from '../models/logModel.js';
 
-let io = null;
-let agentSocket = null;
+const LEGACY_AGENT_ID = 'legacy';
 
-function getAgentSocket() {
-  return agentSocket;
-}
-let status = {
-  state: 'offline',
-  sessionId: null,
-  currentRunId: null,
-  queueDepth: 0,
-  cwd: null,
-  updatedAt: new Date().toISOString(),
-};
+let io = null;
+const agents = new Map(); // agentId -> { socket, userId, status }
 
 function setIo(serverIo) {
   io = serverIo;
 }
 
-function setAgentSocket(socket) {
-  agentSocket = socket;
-  status = { ...status, state: status.state === 'offline' ? 'idle' : status.state, updatedAt: new Date().toISOString() };
+function targetRoom(userId) {
+  return userId ? `user:${userId}` : 'legacy';
+}
+
+function broadcast(userId, event, payload) {
+  if (io) io.to(targetRoom(userId)).emit(event, payload);
+}
+
+function registerAgent({ agentId, userId, socket }) {
+  const status = {
+    state: 'idle',
+    sessionId: null,
+    currentRunId: null,
+    queueDepth: 0,
+    cwd: null,
+    updatedAt: new Date().toISOString(),
+  };
+  agents.set(agentId, { socket, userId, status });
+  broadcast(userId, 'agent:status', status);
 
   socket.on('disconnect', () => {
-    if (agentSocket === socket) {
-      agentSocket = null;
-      status = { ...status, state: 'offline', updatedAt: new Date().toISOString() };
-      if (io) {
-        io.emit('agent:status', status);
-      }
+    const entry = agents.get(agentId);
+    if (entry && entry.socket === socket) {
+      entry.status = { ...entry.status, state: 'offline', updatedAt: new Date().toISOString() };
+      broadcast(userId, 'agent:status', entry.status);
+      agents.delete(agentId);
     }
   });
 }
 
-function getStatus() {
-  return status;
+function getAgentEntry(agentId) {
+  return agents.get(agentId);
 }
 
-async function saveLog(logEvent) {
+function getAgentSocket(agentId) {
+  return agents.get(agentId)?.socket || null;
+}
+
+// Mobile doesn't expose an agent switcher yet, so a user's frontend
+// socket is routed to whichever of their agents is currently connected.
+function resolveAgentId(userId) {
+  if (!userId) {
+    return agents.has(LEGACY_AGENT_ID) ? LEGACY_AGENT_ID : null;
+  }
+  for (const [agentId, entry] of agents) {
+    if (entry.userId === userId) return agentId;
+  }
+  return null;
+}
+
+function getStatus(agentId) {
+  return agents.get(agentId)?.status || { state: 'offline' };
+}
+
+function updateStatus(agentId, newStatus) {
+  const entry = agents.get(agentId);
+  if (!entry) return null;
+  entry.status = { ...entry.status, ...newStatus, updatedAt: new Date().toISOString() };
+  broadcast(entry.userId, 'agent:status', entry.status);
+  return entry.status;
+}
+
+async function saveLog(agentId, userId, logEvent) {
   const record = new Log({
     message: summarizeLog(logEvent),
     level: logEvent.kind === 'error' ? 'error' : 'info',
@@ -47,6 +80,8 @@ async function saveLog(logEvent) {
     seq: logEvent.seq,
     kind: logEvent.kind,
     data: logEvent.data,
+    userId: userId || null,
+    agentId: agentId || null,
   });
   await record.save();
 }
@@ -70,41 +105,38 @@ function summarizeLog(logEvent) {
   }
 }
 
-async function forwardCommand(command, runId) {
-  const record = new Command({ command });
+async function forwardCommand(userId, command, runId) {
+  const agentId = resolveAgentId(userId);
+  const entry = agentId ? agents.get(agentId) : null;
+
+  const record = new Command({ command, userId: userId || null, agentId: agentId || null });
   await record.save();
 
-  if (agentSocket) {
-    agentSocket.emit('agent:command', { runId, command });
+  if (entry?.socket) {
+    entry.socket.emit('agent:command', { runId, command });
     return true;
   }
 
-  if (io) {
-    io.emit('agent:command-failed', { runId, error: 'Agent not connected' });
-  }
-
+  broadcast(userId, 'agent:command-failed', { runId, error: 'Agent not connected' });
   return false;
 }
 
-function forwardCancel(runId) {
-  if (agentSocket) {
-    agentSocket.emit('agent:cancel', { runId });
-  }
+function forwardCancel(userId, runId) {
+  const agentId = resolveAgentId(userId);
+  agents.get(agentId)?.socket?.emit('agent:cancel', { runId });
 }
 
-function forwardApprovalResponse(payload) {
-  if (agentSocket) {
-    agentSocket.emit('agent:approval-response', payload);
-  }
+function forwardApprovalResponse(userId, payload) {
+  const agentId = resolveAgentId(userId);
+  agents.get(agentId)?.socket?.emit('agent:approval-response', payload);
 }
 
-function updateStatus(newStatus) {
-  status = { ...status, ...newStatus, updatedAt: new Date().toISOString() };
-}
+async function listRuns(userId, limit = 50) {
+  const match = { runId: { $ne: null } };
+  if (userId) match.userId = userId;
 
-async function listRuns(limit = 50) {
   const runs = await Log.aggregate([
-    { $match: { runId: { $ne: null } } },
+    { $match: match },
     { $sort: { createdAt: 1, seq: 1 } },
     {
       $group: {
@@ -132,8 +164,11 @@ async function listRuns(limit = 50) {
   }));
 }
 
-async function getRunLogs(runId) {
-  const logs = await Log.find({ runId }).sort({ seq: 1, createdAt: 1 }).lean();
+async function getRunLogs(userId, runId) {
+  const query = { runId };
+  if (userId) query.userId = userId;
+
+  const logs = await Log.find(query).sort({ seq: 1, createdAt: 1 }).lean();
   return logs.map((log) => ({
     kind: log.kind,
     data: log.data,
@@ -144,9 +179,13 @@ async function getRunLogs(runId) {
 }
 
 export {
+  LEGACY_AGENT_ID,
   setIo,
-  setAgentSocket,
+  registerAgent,
+  getAgentEntry,
   getAgentSocket,
+  resolveAgentId,
+  targetRoom,
   getStatus,
   saveLog,
   forwardCommand,
