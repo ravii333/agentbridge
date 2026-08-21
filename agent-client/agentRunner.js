@@ -4,6 +4,9 @@ import { randomUUID } from 'node:crypto';
 import config from './config.js';
 import * as workspace from './workspace.js';
 import * as approvalServer from './approvalServer.js';
+import { getAdapter } from './adapters/index.js';
+
+const adapter = getAdapter(config.AGENT_KIND);
 
 let logCallback = () => {};
 let statusCallback = () => {};
@@ -12,6 +15,7 @@ let sessionId = null;
 let currentChild = null;
 let currentRunId = null;
 let seqCounter = 0;
+let settingsPath = null;
 
 const queue = [];
 let draining = false;
@@ -44,6 +48,7 @@ function emitStatus() {
 function getStatus() {
   return {
     state,
+    agentKind: adapter.id,
     sessionId,
     currentRunId,
     queueDepth: queue.length,
@@ -59,18 +64,6 @@ function setState(next) {
   emitStatus();
 }
 
-function checkClaudeBinary() {
-  return new Promise((resolve, reject) => {
-    execFile(config.CLAUDE_BIN, ['--version'], { shell: process.platform === 'win32' }, (error) => {
-      if (error) {
-        reject(new Error(`claude CLI not found or failed to run (${config.CLAUDE_BIN}): ${error.message}`));
-        return;
-      }
-      resolve();
-    });
-  });
-}
-
 async function start() {
   if (!existsSync(workspace.getWorkspace())) {
     lastError = { message: `Workspace does not exist: ${workspace.getWorkspace()}`, at: new Date().toISOString() };
@@ -79,11 +72,15 @@ async function start() {
   }
 
   try {
-    await checkClaudeBinary();
+    await adapter.checkBinary(config.CLAUDE_BIN);
   } catch (error) {
     lastError = { message: error.message, at: new Date().toISOString() };
     setState('error');
     throw error;
+  }
+
+  if (adapter.writeApprovalSettings && approvalServer.getPort()) {
+    settingsPath = adapter.writeApprovalSettings(approvalServer.getPort(), approvalServer.getSecret());
   }
 
   lastError = null;
@@ -127,32 +124,22 @@ function runJob({ runId, command }) {
     currentRunId = runId;
     setState('running');
 
-    const args = [
-      '-p',
-      '--output-format', 'stream-json',
-      '--verbose',
-      '--permission-mode', config.PERMISSION_MODE,
-    ];
-
-    const settingsPath = approvalServer.getSettingsPath();
-    if (settingsPath) {
-      args.push('--settings', settingsPath);
-    }
-
-    if (sessionId) {
-      args.push('--resume', sessionId);
-    }
-
-    if (config.CLAUDE_MODEL) {
-      args.push('--model', config.CLAUDE_MODEL);
-    }
-
-    const child = spawn(config.CLAUDE_BIN, args, {
+    const spawnSpec = adapter.buildSpawn({
+      bin: config.CLAUDE_BIN,
       cwd: workspace.getWorkspace(),
+      command,
+      sessionId,
+      model: config.CLAUDE_MODEL,
+      permissionMode: config.PERMISSION_MODE,
+      settingsPath,
+    });
+
+    const child = spawn(spawnSpec.cmd, spawnSpec.args, {
+      cwd: spawnSpec.cwd || workspace.getWorkspace(),
       shell: process.platform === 'win32',
       windowsHide: true,
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, FORCE_COLOR: '0' },
+      env: { ...process.env, ...(spawnSpec.env || {}) },
     });
 
     currentChild = child;
@@ -160,6 +147,7 @@ function runJob({ runId, command }) {
     let sawResult = false;
     let stdoutBuf = '';
     let stderrBuf = '';
+    const parserState = { sessionId };
 
     child.stdout.on('data', (chunk) => {
       stdoutBuf += chunk.toString('utf8');
@@ -168,7 +156,11 @@ function runJob({ runId, command }) {
         const line = stdoutBuf.slice(0, newlineIndex).replace(/\r$/, '').trim();
         stdoutBuf = stdoutBuf.slice(newlineIndex + 1);
         if (line) {
-          sawResult = handleStreamLine(runId, line) || sawResult;
+          const { events, done } = adapter.parseLine(line, parserState);
+          for (const evt of events) {
+            emitLog(runId, evt.kind, evt.data);
+          }
+          sawResult = sawResult || done;
         }
       }
     });
@@ -182,6 +174,8 @@ function runJob({ runId, command }) {
     });
 
     child.on('close', (code) => {
+      sessionId = parserState.sessionId || sessionId;
+
       if (stderrBuf.trim()) {
         emitLog(runId, 'error', { message: stderrBuf.trim(), fatal: !sawResult });
       }
@@ -203,68 +197,9 @@ function runJob({ runId, command }) {
       resolve();
     });
 
-    child.stdin.write(command);
+    child.stdin.write(spawnSpec.stdin ?? command);
     child.stdin.end();
   });
-}
-
-function handleStreamLine(runId, line) {
-  let event;
-  try {
-    event = JSON.parse(line);
-  } catch (error) {
-    emitLog(runId, 'error', { message: `Failed to parse agent output: ${line.slice(0, 200)}`, fatal: false });
-    return false;
-  }
-
-  if (event.type === 'system' && event.subtype === 'init') {
-    sessionId = event.session_id || sessionId;
-    emitLog(runId, 'run_started', {
-      sessionId,
-      cwd: event.cwd,
-      tools: event.tools,
-      model: event.model,
-    });
-    return false;
-  }
-
-  if (event.type === 'assistant' && event.message?.content) {
-    for (const block of event.message.content) {
-      if (block.type === 'text') {
-        emitLog(runId, 'text', { text: block.text });
-      } else if (block.type === 'tool_use') {
-        emitLog(runId, 'tool_use', { toolUseId: block.id, tool: block.name, input: block.input });
-      }
-    }
-    return false;
-  }
-
-  if (event.type === 'user' && event.message?.content) {
-    for (const block of event.message.content) {
-      if (block.type === 'tool_result') {
-        const preview = typeof block.content === 'string'
-          ? block.content.slice(0, 2000)
-          : JSON.stringify(block.content).slice(0, 2000);
-        emitLog(runId, 'tool_result', { toolUseId: block.tool_use_id, ok: !block.is_error, preview });
-      }
-    }
-    return false;
-  }
-
-  if (event.type === 'result') {
-    sessionId = event.session_id || sessionId;
-    emitLog(runId, 'run_finished', {
-      ok: !event.is_error,
-      summary: event.result,
-      numTurns: event.num_turns,
-      durationMs: event.duration_ms,
-      costUsd: event.total_cost_usd,
-      sessionId,
-    });
-    return true;
-  }
-
-  return false;
 }
 
 async function cancel(runId) {

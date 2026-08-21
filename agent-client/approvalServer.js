@@ -1,8 +1,5 @@
 import http from 'node:http';
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import config from './config.js';
 
 const APPROVAL_TIMEOUT_MS = 170_000;
@@ -12,7 +9,7 @@ const pending = new Map();
 
 let socket = null;
 let server = null;
-let settingsPath = null;
+let port = null;
 let getCurrentRunId = () => null;
 
 function init({ socket: socketRef, getCurrentRunId: runIdGetter }) {
@@ -94,31 +91,6 @@ async function handleRequest(req, res) {
   );
 }
 
-function writeSettingsFile(port) {
-  const dir = mkdtempSync(path.join(os.tmpdir(), 'agentbridge-'));
-  const file = path.join(dir, 'settings.json');
-  writeFileSync(
-    file,
-    JSON.stringify({
-      hooks: {
-        PreToolUse: [
-          {
-            hooks: [
-              {
-                type: 'http',
-                url: `http://127.0.0.1:${port}/hooks/pre-tool-use`,
-                headers: { 'x-hook-secret': secret },
-                timeout: 180,
-              },
-            ],
-          },
-        ],
-      },
-    }),
-  );
-  return file;
-}
-
 function start() {
   return new Promise((resolve, reject) => {
     server = http.createServer((req, res) => {
@@ -130,15 +102,18 @@ function start() {
     server.on('error', reject);
 
     server.listen(config.HOOK_SERVER_PORT, '127.0.0.1', () => {
-      const { port } = server.address();
-      settingsPath = writeSettingsFile(port);
-      resolve({ port, settingsPath });
+      port = server.address().port;
+      resolve({ port });
     });
   });
 }
 
-function getSettingsPath() {
-  return settingsPath;
+function getPort() {
+  return port;
 }
 
-export { init, start, getSettingsPath, handleApprovalResponse };
+function getSecret() {
+  return secret;
+}
+
+export { init, start, getPort, getSecret, handleApprovalResponse };
