@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Command from '../models/commandModel.js';
 import Log from '../models/logModel.js';
 
@@ -138,7 +139,9 @@ function forwardApprovalResponse(userId, payload, explicitAgentId) {
 
 async function listRuns(userId, limit = 50) {
   const match = { runId: { $ne: null } };
-  if (userId) match.userId = userId;
+  // aggregate() bypasses Mongoose's automatic query casting, so a plain
+  // userId string here would silently never match the stored ObjectId.
+  if (userId) match.userId = new mongoose.Types.ObjectId(userId);
 
   const runs = await Log.aggregate([
     { $match: match },
