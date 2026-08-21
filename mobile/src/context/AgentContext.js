@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createSocket } from '../api/socket.js';
 import { useAuth } from './AuthContext.js';
+import { listAgents } from '../api/authApi.js';
 import latestActivity from '../utils/latestActivity.js';
 
 const REJECT_REASONS = {
@@ -18,11 +19,40 @@ export function AgentProvider({ children }) {
   const [commandError, setCommandError] = useState(null);
   const [recentCommands, setRecentCommands] = useState([]);
   const [pendingApprovals, setPendingApprovals] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [activeAgentId, setActiveAgentId] = useState(null);
+  const activeAgentIdRef = useRef(null);
+
+  function applySelection(client, agentId) {
+    activeAgentIdRef.current = agentId;
+    setActiveAgentId(agentId);
+    setLogs([]);
+    setPendingApprovals([]);
+    setStatus({ state: 'connecting', sessionId: null, currentRunId: null, updatedAt: null });
+    client.emit('frontend:select-agent', agentId, (result) => {
+      if (result?.error) {
+        setCommandError(result.error);
+      }
+    });
+  }
+
+  const refreshAgents = () => {
+    if (!token) return Promise.resolve([]);
+    return listAgents(token)
+      .then((list) => {
+        setAgents(list);
+        return list;
+      })
+      .catch(() => []);
+  };
 
   useEffect(() => {
     if (!token) {
       setSocket(null);
       setStatus((current) => ({ ...current, state: 'offline' }));
+      setAgents([]);
+      setActiveAgentId(null);
+      activeAgentIdRef.current = null;
       return undefined;
     }
 
@@ -31,7 +61,15 @@ export function AgentProvider({ children }) {
 
     client.on('connect', () => {
       client.emit('frontend:ready');
-      client.emit('agent:sync');
+      refreshAgents().then((list) => {
+        const preferred =
+          list.find((a) => a.id === activeAgentIdRef.current) || list.find((a) => a.connected) || list[0];
+        if (preferred) {
+          applySelection(client, preferred.id);
+        } else {
+          client.emit('agent:sync');
+        }
+      });
     });
 
     client.on('disconnect', () => {
@@ -39,6 +77,7 @@ export function AgentProvider({ children }) {
     });
 
     client.on('agent:log', (logEvent) => {
+      if (activeAgentIdRef.current && logEvent.agentId && logEvent.agentId !== activeAgentIdRef.current) return;
       setCommandError(null);
       if (logEvent.kind === 'run_started') {
         setPendingApprovals([]);
@@ -50,14 +89,20 @@ export function AgentProvider({ children }) {
     });
 
     client.on('agent:approval-request', (request) => {
+      if (activeAgentIdRef.current && request.agentId && request.agentId !== activeAgentIdRef.current) return;
       setPendingApprovals((current) => [...current, request]);
     });
 
     client.on('agent:status', (agentStatus) => {
+      if (activeAgentIdRef.current && agentStatus.agentId && agentStatus.agentId !== activeAgentIdRef.current) return;
       setStatus(agentStatus);
+      setAgents((current) =>
+        current.map((a) => (a.id === agentStatus.agentId ? { ...a, connected: agentStatus.state !== 'offline' } : a)),
+      );
     });
 
     client.on('agent:ack', (ack) => {
+      if (activeAgentIdRef.current && ack?.agentId && ack.agentId !== activeAgentIdRef.current) return;
       if (ack && ack.accepted === false) {
         setCommandError(REJECT_REASONS[ack.reason] || 'Command was not accepted.');
       }
@@ -73,6 +118,11 @@ export function AgentProvider({ children }) {
   }, [token]);
 
   const activity = useMemo(() => latestActivity(logs), [logs]);
+
+  const selectAgent = (agentId) => {
+    if (!socket || agentId === activeAgentIdRef.current) return;
+    applySelection(socket, agentId);
+  };
 
   const sendCommand = (command) => {
     if (!socket) return;
@@ -124,6 +174,10 @@ export function AgentProvider({ children }) {
     commandError,
     recentCommands,
     pendingApprovals,
+    agents,
+    activeAgentId,
+    selectAgent,
+    refreshAgents,
     sendCommand,
     respondApproval,
     browseWorkspace,

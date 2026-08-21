@@ -8,6 +8,7 @@ import LogFeed from '../components/LogFeed.js';
 import Composer from '../components/Composer.js';
 import ApprovalPrompt from '../components/ApprovalPrompt.js';
 import WorkspacePicker from '../components/WorkspacePicker.js';
+import AgentPicker from '../components/AgentPicker.js';
 import { colors } from '../theme.js';
 
 function LiveFeedScreen() {
@@ -22,14 +23,22 @@ function LiveFeedScreen() {
     respondApproval,
     browseWorkspace,
     setWorkspace,
+    agents,
+    activeAgentId,
+    selectAgent,
+    refreshAgents,
   } = useAgent();
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [agentPickerVisible, setAgentPickerVisible] = useState(false);
+  const activeAgent = agents.find((a) => a.id === activeAgentId);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <TopBar
         state={status?.state}
         cwd={status?.cwd}
+        agentName={activeAgent?.name}
+        onPressAgents={() => setAgentPickerVisible(true)}
         onPressWorkspace={() => setPickerVisible(true)}
         onPressAddAgent={() => navigation.navigate('AddAgent')}
       />
@@ -59,6 +68,15 @@ function LiveFeedScreen() {
         currentPath={status?.cwd}
         onBrowse={browseWorkspace}
         onSelect={setWorkspace}
+      />
+
+      <AgentPicker
+        visible={agentPickerVisible}
+        onClose={() => setAgentPickerVisible(false)}
+        agents={agents}
+        activeAgentId={activeAgentId}
+        onRefresh={refreshAgents}
+        onSelect={selectAgent}
       />
     </SafeAreaView>
   );

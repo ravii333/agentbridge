@@ -1,10 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAgent } from '../context/AgentContext.js';
 import TopBar from '../components/TopBar.js';
 import LedgerRow from '../components/LedgerRow.js';
 import Button from '../components/Button.js';
+import AgentPicker from '../components/AgentPicker.js';
 import { colors, fonts, stateColor } from '../theme.js';
 
 function relativeTime(iso) {
@@ -19,12 +21,19 @@ function relativeTime(iso) {
 
 function StatusScreen() {
   const navigation = useNavigation();
-  const { status, activity } = useAgent();
+  const { status, activity, agents, activeAgentId, selectAgent, refreshAgents } = useAgent();
   const state = status?.state || 'offline';
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const activeAgent = agents.find((a) => a.id === activeAgentId);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <TopBar state={state} />
+      <TopBar
+        state={state}
+        agentName={activeAgent?.name}
+        onPressAgents={() => setPickerVisible(true)}
+        onPressAddAgent={() => navigation.navigate('AddAgent')}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         {state === 'offline' ? (
@@ -64,6 +73,15 @@ function StatusScreen() {
         <View style={{ height: 10 }} />
         <Button label="History" variant="secondary" onPress={() => navigation.navigate('History')} />
       </View>
+
+      <AgentPicker
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        agents={agents}
+        activeAgentId={activeAgentId}
+        onRefresh={refreshAgents}
+        onSelect={selectAgent}
+      />
     </SafeAreaView>
   );
 }

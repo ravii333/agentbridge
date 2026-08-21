@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import Agent from '../models/agentModel.js';
+import { isConnected } from '../services/agentService.js';
 
 const USER_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const PAIRING_TTL_MS = 10 * 60 * 1000;
@@ -83,4 +84,19 @@ async function claim(req, res) {
   res.json({ ok: true });
 }
 
-export { createDeviceCode, getDeviceToken, claim, hashToken };
+async function listAgents(req, res) {
+  const agents = await Agent.find({ userId: req.userId, status: 'claimed' })
+    .sort({ lastSeenAt: -1, createdAt: -1 })
+    .lean();
+
+  res.json({
+    agents: agents.map((agent) => ({
+      id: agent._id.toString(),
+      name: agent.name,
+      connected: isConnected(agent._id.toString()),
+      lastSeenAt: agent.lastSeenAt,
+    })),
+  });
+}
+
+export { createDeviceCode, getDeviceToken, claim, listAgents, hashToken };

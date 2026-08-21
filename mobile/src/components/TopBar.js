@@ -8,7 +8,7 @@ function shortenPath(cwd) {
   return parts.length > 2 ? `…/${parts.slice(-2).join('/')}` : cwd;
 }
 
-function TopBar({ state, cwd, onPressWorkspace, onPressAddAgent }) {
+function TopBar({ state, cwd, agentName, onPressWorkspace, onPressAddAgent, onPressAgents }) {
   const label = shortenPath(cwd);
 
   return (
@@ -23,6 +23,14 @@ function TopBar({ state, cwd, onPressWorkspace, onPressAddAgent }) {
         )}
         <StatusChip state={state} />
       </View>
+
+      {onPressAgents && (
+        <Pressable style={styles.workspaceRow} onPress={onPressAgents}>
+          <Text style={styles.workspaceLabel} numberOfLines={1}>
+            {agentName || 'select agent'}
+          </Text>
+        </Pressable>
+      )}
 
       {onPressWorkspace && (
         <Pressable style={styles.workspaceRow} onPress={onPressWorkspace}>

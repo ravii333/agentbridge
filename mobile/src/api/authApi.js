@@ -37,3 +37,15 @@ export function claimAgent(token, userCode) {
     return data;
   });
 }
+
+export function listAgents(token) {
+  return fetch(`${BACKEND_URL}/api/agents`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(async (res) => {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || `Request failed (${res.status})`);
+    }
+    return data.agents;
+  });
+}

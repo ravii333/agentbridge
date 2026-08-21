@@ -20,6 +20,7 @@ function broadcast(userId, event, payload) {
 
 function registerAgent({ agentId, userId, socket }) {
   const status = {
+    agentId,
     state: 'idle',
     sessionId: null,
     currentRunId: null,
@@ -48,6 +49,10 @@ function getAgentSocket(agentId) {
   return agents.get(agentId)?.socket || null;
 }
 
+function isConnected(agentId) {
+  return agents.has(agentId);
+}
+
 // Mobile doesn't expose an agent switcher yet, so a user's frontend
 // socket is routed to whichever of their agents is currently connected.
 function resolveAgentId(userId) {
@@ -67,7 +72,7 @@ function getStatus(agentId) {
 function updateStatus(agentId, newStatus) {
   const entry = agents.get(agentId);
   if (!entry) return null;
-  entry.status = { ...entry.status, ...newStatus, updatedAt: new Date().toISOString() };
+  entry.status = { ...entry.status, ...newStatus, agentId, updatedAt: new Date().toISOString() };
   broadcast(entry.userId, 'agent:status', entry.status);
   return entry.status;
 }
@@ -105,8 +110,8 @@ function summarizeLog(logEvent) {
   }
 }
 
-async function forwardCommand(userId, command, runId) {
-  const agentId = resolveAgentId(userId);
+async function forwardCommand(userId, command, runId, explicitAgentId) {
+  const agentId = explicitAgentId || resolveAgentId(userId);
   const entry = agentId ? agents.get(agentId) : null;
 
   const record = new Command({ command, userId: userId || null, agentId: agentId || null });
@@ -121,13 +126,13 @@ async function forwardCommand(userId, command, runId) {
   return false;
 }
 
-function forwardCancel(userId, runId) {
-  const agentId = resolveAgentId(userId);
+function forwardCancel(userId, runId, explicitAgentId) {
+  const agentId = explicitAgentId || resolveAgentId(userId);
   agents.get(agentId)?.socket?.emit('agent:cancel', { runId });
 }
 
-function forwardApprovalResponse(userId, payload) {
-  const agentId = resolveAgentId(userId);
+function forwardApprovalResponse(userId, payload, explicitAgentId) {
+  const agentId = explicitAgentId || resolveAgentId(userId);
   agents.get(agentId)?.socket?.emit('agent:approval-response', payload);
 }
 
@@ -184,6 +189,7 @@ export {
   registerAgent,
   getAgentEntry,
   getAgentSocket,
+  isConnected,
   resolveAgentId,
   targetRoom,
   getStatus,
