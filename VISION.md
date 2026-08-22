@@ -50,5 +50,5 @@ Phone / Browser  ⇄  Backend (relay + persistence)  ⇄  Agent-client (runs on 
 
 - Full architecture + implementation plan for Stage 1: `C:\Users\ravik\.claude\plans\keen-popping-heron.md`
 - Setup instructions: [README.md](README.md)
-- Agent wrapper: [agent-client/agentRunner.js](agent-client/agentRunner.js)
+- Agent wrapper: [agentbridge-client/agentRunner.js](agentbridge-client/agentRunner.js)
 - Auth: [backend/src/utils/auth.js](backend/src/utils/auth.js), [backend/src/sockets/socketManager.js](backend/src/sockets/socketManager.js)

@@ -18,7 +18,7 @@ const STEPS = [
   {
     n: '2',
     title: 'Run the agent',
-    body: 'In the agent-client folder: npm install && npm start',
+    body: 'In the agentbridge-client folder: npm install && npm start',
     mono: true,
   },
   {

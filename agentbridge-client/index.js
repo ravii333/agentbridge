@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import os from 'node:os';
 import * as socketClient from './socketClient.js';
 import * as agentRunner from './agentRunner.js';

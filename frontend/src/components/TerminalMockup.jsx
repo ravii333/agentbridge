@@ -1,11 +1,11 @@
 function TerminalMockup() {
   return (
-    <div className="mock-window mock-terminal" role="img" aria-label="Terminal showing the agent-client pairing flow">
+    <div className="mock-window mock-terminal" role="img" aria-label="Terminal showing the agentbridge-client pairing flow">
       <div className="mock-titlebar">
         <span className="mock-dot mock-dot--red" />
         <span className="mock-dot mock-dot--yellow" />
         <span className="mock-dot mock-dot--green" />
-        <span className="mock-titlebar-label">agent-client</span>
+        <span className="mock-titlebar-label">agentbridge-client</span>
       </div>
       <div className="mock-term-body">
         <p><span className="mock-prompt">$</span> npx agentbridge</p>

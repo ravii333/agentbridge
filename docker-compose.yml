@@ -1,0 +1,23 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URI: mongodb://mongo:27017/agentbridge
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env before running}
+      PORT: 4000
+    ports:
+      - "4000:4000"
+
+volumes:
+  mongo-data:
