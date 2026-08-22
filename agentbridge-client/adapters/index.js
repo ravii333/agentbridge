@@ -1,4 +1,5 @@
 import claudeCode from './claudeCodeAdapter.js';
+import codex from './codexAdapter.js';
 
 // Each entry here is one CLI agentRunner.js knows how to drive. Adding
 // support for another CLI (Codex, Cursor, ...) means writing a module with
@@ -7,6 +8,7 @@ import claudeCode from './claudeCodeAdapter.js';
 // and registering it below.
 const ADAPTERS = {
   [claudeCode.id]: claudeCode,
+  [codex.id]: codex,
 };
 
 function getAdapter(id) {

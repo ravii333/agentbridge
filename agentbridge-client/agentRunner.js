@@ -134,9 +134,22 @@ function runJob({ runId, command }) {
       settingsPath,
     });
 
-    const child = spawn(spawnSpec.cmd, spawnSpec.args, {
+    // On Windows, spawn() needs shell:true to resolve .cmd-shimmed binaries
+    // (npm-installed CLIs) - but shell:true just concatenates args with a
+    // space, unquoted. Any arg containing a space (a prompt, a --settings
+    // path under a "Users\Some Name" home dir, ...) would silently split
+    // into multiple arguments. Quote everything ourselves and pass one
+    // command string instead of relying on Node's raw concatenation.
+    const useShell = process.platform === 'win32';
+    const commandLine = useShell
+      ? [spawnSpec.cmd, ...spawnSpec.args]
+          .map((part) => (/[\s"]/.test(part) ? `"${part.replace(/"/g, '\\"')}"` : part))
+          .join(' ')
+      : spawnSpec.cmd;
+
+    const child = spawn(commandLine, useShell ? [] : spawnSpec.args, {
       cwd: spawnSpec.cwd || workspace.getWorkspace(),
-      shell: process.platform === 'win32',
+      shell: useShell,
       windowsHide: true,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, ...(spawnSpec.env || {}) },
@@ -176,8 +189,9 @@ function runJob({ runId, command }) {
     child.on('close', (code) => {
       sessionId = parserState.sessionId || sessionId;
 
-      if (stderrBuf.trim()) {
-        emitLog(runId, 'error', { message: stderrBuf.trim(), fatal: !sawResult });
+      const meaningfulStderr = (adapter.stripBenignStderr ? adapter.stripBenignStderr(stderrBuf) : stderrBuf).trim();
+      if (meaningfulStderr) {
+        emitLog(runId, 'error', { message: meaningfulStderr, fatal: !sawResult });
       }
 
       if (!sawResult) {
