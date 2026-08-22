@@ -93,6 +93,7 @@ async function listAgents(req, res) {
     agents: agents.map((agent) => ({
       id: agent._id.toString(),
       name: agent.name,
+      kind: agent.kind,
       connected: isConnected(agent._id.toString()),
       lastSeenAt: agent.lastSeenAt,
     })),

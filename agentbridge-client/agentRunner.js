@@ -49,6 +49,7 @@ function getStatus() {
   return {
     state,
     agentKind: adapter.id,
+    approvalMode: adapter.capabilities.approval,
     sessionId,
     currentRunId,
     queueDepth: queue.length,

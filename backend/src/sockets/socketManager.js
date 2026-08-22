@@ -118,7 +118,11 @@ function attach(server) {
 
     socket.on('agent:status', (status) => {
       if (!agentId) return;
+      const previous = getStatus(agentId);
       updateStatus(agentId, status);
+      if (status.agentKind && status.agentKind !== previous?.agentKind && agentId !== LEGACY_AGENT_ID) {
+        Agent.updateOne({ _id: agentId }, { kind: status.agentKind }).catch(() => {});
+      }
     });
 
     socket.on('agent:ack', (ack) => {

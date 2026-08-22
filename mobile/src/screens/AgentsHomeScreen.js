@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext.js';
 import { useAgent } from '../context/AgentContext.js';
 import Button from '../components/Button.js';
+import agentKindLabel from '../utils/agentKindLabel.js';
 import { colors, fonts } from '../theme.js';
 
 function AgentsHomeScreen() {
@@ -54,7 +55,10 @@ function AgentsHomeScreen() {
               />
               <View style={styles.rowText}>
                 <Text style={styles.rowName}>{item.name || 'My agent'}</Text>
-                <Text style={styles.rowStatus}>{item.connected ? 'Connected' : 'Offline'}</Text>
+                <Text style={styles.rowStatus}>
+                  {item.connected ? 'Connected' : 'Offline'}
+                  {agentKindLabel(item.kind) ? ` · ${agentKindLabel(item.kind)}` : ''}
+                </Text>
               </View>
               {item.id === activeAgentId && <Text style={styles.rowActive}>active</Text>}
             </Pressable>

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { FlatList, Modal, Pressable, Text, View, StyleSheet } from 'react-native';
 import { colors, fonts, radii } from '../theme.js';
 import Button from './Button.js';
+import agentKindLabel from '../utils/agentKindLabel.js';
 
 function AgentPicker({ visible, onClose, agents, activeAgentId, onRefresh, onSelect }) {
   useEffect(() => {
@@ -30,7 +31,10 @@ function AgentPicker({ visible, onClose, agents, activeAgentId, onRefresh, onSel
                   }}
                 >
                   <View style={[styles.dot, { backgroundColor: item.connected ? colors.success : colors.offline }]} />
-                  <Text style={styles.rowText}>{item.name || 'My agent'}</Text>
+                  <View style={styles.rowText}>
+                    <Text style={styles.rowName}>{item.name || 'My agent'}</Text>
+                    {agentKindLabel(item.kind) && <Text style={styles.rowKind}>{agentKindLabel(item.kind)}</Text>}
+                  </View>
                   <Text style={styles.rowStatus}>{item.connected ? 'connected' : 'offline'}</Text>
                 </Pressable>
               )}
@@ -93,9 +97,17 @@ const styles = StyleSheet.create({
   },
   rowText: {
     flex: 1,
+  },
+  rowName: {
     color: colors.text,
     fontFamily: fonts.mono,
     fontSize: 13,
+  },
+  rowKind: {
+    color: colors.textFaint,
+    fontFamily: fonts.mono,
+    fontSize: 10.5,
+    marginTop: 2,
   },
   rowStatus: {
     color: colors.textFaint,

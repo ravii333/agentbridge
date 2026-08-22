@@ -7,6 +7,7 @@ import TopBar from '../components/TopBar.js';
 import LogFeed from '../components/LogFeed.js';
 import Composer from '../components/Composer.js';
 import ApprovalPrompt from '../components/ApprovalPrompt.js';
+import ApprovalModeNotice from '../components/ApprovalModeNotice.js';
 import WorkspacePicker from '../components/WorkspacePicker.js';
 import AgentPicker from '../components/AgentPicker.js';
 import { colors } from '../theme.js';
@@ -53,11 +54,15 @@ function LiveFeedScreen() {
         </View>
 
         <View style={styles.composer}>
-          <ApprovalPrompt
-            approval={pendingApprovals[0]}
-            onApprove={(id) => respondApproval(id, true)}
-            onDeny={(id) => respondApproval(id, false)}
-          />
+          {status?.approvalMode === 'policy' ? (
+            <ApprovalModeNotice agentKind={status?.agentKind} />
+          ) : (
+            <ApprovalPrompt
+              approval={pendingApprovals[0]}
+              onApprove={(id) => respondApproval(id, true)}
+              onDeny={(id) => respondApproval(id, false)}
+            />
+          )}
           <Composer onSend={sendCommand} error={commandError} recent={recentCommands} />
         </View>
       </KeyboardAvoidingView>

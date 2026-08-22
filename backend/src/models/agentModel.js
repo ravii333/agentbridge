@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const agentSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   name: { type: String, default: 'My agent' },
+  kind: { type: String, default: null },
   deviceCode: { type: String, required: true, unique: true },
   userCode: { type: String, required: true },
   tokenHash: { type: String, default: null },
