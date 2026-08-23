@@ -69,10 +69,15 @@ function App() {
               watch every line stream in, approve every file it touches, from anywhere.
             </p>
             <div className="hero-actions">
-              <a href="#download" className="btn btn--solid">Download for PC</a>
-              <span className="btn btn--ghost btn--disabled" aria-disabled="true">
-                Get the mobile app <span className="pill">coming soon</span>
-              </span>
+              <a href="#download" className="btn btn--solid">Get started</a>
+              <a
+                href="https://github.com/ravii333/agentbridge"
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn--ghost"
+              >
+                View on GitHub
+              </a>
             </div>
           </div>
 
@@ -125,27 +130,35 @@ function App() {
         </section>
 
         <section id="download" className="download">
-          <h2>Download AgentBridge</h2>
-          <p className="download-sub">Installers are still being finalized — links go live here as soon as they're ready.</p>
+          <h2>Get AgentBridge</h2>
+          <p className="download-sub">
+            Source-available today — packaged installers and an npm release are on the roadmap.
+            Clone the repo and you're running in minutes.
+          </p>
           <div className="download-grid">
             <div className="download-card">
               <h3>AgentBridge Agent</h3>
-              <p>Runs on the machine with your coding CLI installed.</p>
-              <div className="download-buttons">
-                <span className="btn btn--outline btn--disabled" aria-disabled="true">Windows</span>
-                <span className="btn btn--outline btn--disabled" aria-disabled="true">macOS</span>
-                <span className="btn btn--outline btn--disabled" aria-disabled="true">Linux</span>
-              </div>
+              <p>Runs on the machine with your coding CLI installed. Windows, macOS, and Linux.</p>
+              <pre className="download-snippet">
+                <code>{'git clone https://github.com/ravii333/agentbridge\ncd agentbridge/agentbridge-client\nnpm install && npm start'}</code>
+              </pre>
             </div>
             <div className="download-card">
               <h3>AgentBridge Mobile</h3>
-              <p>Pair with your agent and take it with you.</p>
-              <div className="download-buttons">
-                <span className="btn btn--outline btn--disabled" aria-disabled="true">iOS</span>
-                <span className="btn btn--outline btn--disabled" aria-disabled="true">Android</span>
-              </div>
+              <p>Pair with your agent and take it with you. Runs via Expo Go today.</p>
+              <pre className="download-snippet">
+                <code>{'cd agentbridge/mobile\nnpm install && npm start'}</code>
+              </pre>
             </div>
           </div>
+          <a
+            href="https://github.com/ravii333/agentbridge"
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn--solid download-cta"
+          >
+            View full setup on GitHub
+          </a>
         </section>
       </main>
 
