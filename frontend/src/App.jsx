@@ -1,9 +1,10 @@
 import TerminalMockup from './components/TerminalMockup.jsx';
 import PhoneMockup from './components/PhoneMockup.jsx';
+import BrandMark from './components/BrandMark.jsx';
 
 const AGENTS = [
   { name: 'Claude Code', status: 'available' },
-  { name: 'Codex CLI', status: 'coming soon' },
+  { name: 'Codex CLI', status: 'available' },
   { name: 'Cursor', status: 'coming soon' },
 ];
 
@@ -22,7 +23,7 @@ const FEATURES = [
   },
   {
     title: 'Built for more than one CLI',
-    body: 'A pluggable adapter layer means Claude Code today, and Codex or Cursor next, without changing how you pair or approve.',
+    body: 'A pluggable adapter layer means Claude Code and Codex CLI today, and more (like Cursor) next, without changing how you pair or approve.',
   },
   {
     title: 'Your account, your history',
@@ -46,7 +47,7 @@ function App() {
       <header className="nav">
         <div className="nav-inner">
           <a className="brand" href="#top">
-            <span className="brand-mark">⌁</span> AgentBridge
+            <BrandMark size={22} /> AgentBridge
           </a>
           <nav className="nav-links">
             <a href="#features">Features</a>
@@ -77,7 +78,9 @@ function App() {
 
           <div className="hero-mocks">
             <TerminalMockup />
-            <span className="hero-link" aria-hidden="true">⌁</span>
+            <span className="hero-link" aria-hidden="true">
+              <BrandMark size={30} />
+            </span>
             <PhoneMockup />
           </div>
         </section>
@@ -147,7 +150,9 @@ function App() {
       </main>
 
       <footer className="site-footer">
-        <span>AgentBridge</span>
+        <span className="footer-brand">
+          <BrandMark size={22} /> AgentBridge
+        </span>
         <a href="https://github.com/ravii333/agentbridge" target="_blank" rel="noreferrer">View on GitHub</a>
       </footer>
     </>
