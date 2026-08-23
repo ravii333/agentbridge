@@ -37,6 +37,8 @@ Claude Code and Codex CLI, via a pluggable adapter layer that more coding CLIs c
   approval prompts with diff view, workspace picker, run history. Ships with real AgentBridge
   branding (logo, launch screen, app icons — see `mobile/assets/brand/`).
 - `frontend/` — the project's public landing page (not a dashboard — that's `mobile/`'s job).
+  React + Vite, deployed to Vercel at https://agentbridge-ecru.vercel.app/. See
+  `frontend/README.md` for dev/build/deploy notes.
 
 ## Run it locally
 
