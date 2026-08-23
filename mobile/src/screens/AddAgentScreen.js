@@ -7,6 +7,7 @@ import { useAgent } from '../context/AgentContext.js';
 import { claimAgent } from '../api/authApi.js';
 import Button from '../components/Button.js';
 import CodeInput from '../components/CodeInput.js';
+import SuccessCheck from '../components/SuccessCheck.js';
 import { colors, fonts, radii } from '../theme.js';
 
 const STEPS = [
@@ -105,8 +106,9 @@ function AddAgentScreen() {
 
         {stage === 'success' && (
           <View style={styles.content}>
-            <Text style={styles.title}>Agent linked</Text>
-            <Text style={styles.success}>
+            <SuccessCheck />
+            <Text style={[styles.title, styles.centered]}>Agent linked</Text>
+            <Text style={[styles.success, styles.centered]}>
               Your agent is now enabled on your phone. It should connect shortly.
             </Text>
             <View style={styles.actions}>
@@ -133,6 +135,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 32,
     gap: 12,
+  },
+  centered: {
+    textAlign: 'center',
   },
   title: {
     color: colors.text,

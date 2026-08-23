@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext.js';
 import { useAgent } from '../context/AgentContext.js';
 import Button from '../components/Button.js';
+import Logo from '../components/Logo.js';
 import agentKindLabel from '../utils/agentKindLabel.js';
 import { colors, fonts } from '../theme.js';
 
@@ -25,7 +26,7 @@ function AgentsHomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.mark}>{'{ }'}</Text>
+        <Logo size={18} />
         <Text style={styles.title}>agentbridge</Text>
         <Pressable onPress={logout} hitSlop={8}>
           <Text style={styles.logout}>sign out</Text>
@@ -36,6 +37,7 @@ function AgentsHomeScreen() {
 
       {agents.length === 0 ? (
         <View style={styles.empty}>
+          <Logo size={72} dim />
           <Text style={styles.emptyTitle}>No agents connected yet</Text>
           <Text style={styles.emptyBody}>
             Connect a computer running your coding CLI to control it from here — approve tool
@@ -85,11 +87,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 4,
-  },
-  mark: {
-    color: colors.success,
-    fontFamily: fonts.mono,
-    fontWeight: '700',
   },
   title: {
     flex: 1,
@@ -156,21 +153,24 @@ const styles = StyleSheet.create({
   },
   empty: {
     flex: 1,
+    alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 20,
-    gap: 8,
+    paddingTop: 40,
+    gap: 10,
   },
   emptyTitle: {
     color: colors.text,
     fontFamily: fonts.mono,
     fontSize: 14,
     fontWeight: '700',
+    marginTop: 4,
   },
   emptyBody: {
     color: colors.textDim,
     fontFamily: fonts.mono,
     fontSize: 13,
     lineHeight: 20,
+    textAlign: 'center',
   },
   actions: {
     padding: 20,

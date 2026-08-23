@@ -1,11 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../theme.js';
 import Button from './Button.js';
+import Logo from './Logo.js';
 
 function EmptyState({ title, message, actionLabel, onAction }) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.mark}>{'{ }'}</Text>
+      <Logo size={56} dim cables={false} />
       <Text style={styles.title}>{title}</Text>
       {message && <Text style={styles.message}>{message}</Text>}
       {actionLabel && onAction && (
@@ -24,11 +25,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 48,
     paddingHorizontal: 20,
-  },
-  mark: {
-    color: colors.textFaint,
-    fontFamily: fonts.mono,
-    fontSize: 22,
   },
   title: {
     color: colors.text,

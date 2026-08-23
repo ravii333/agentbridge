@@ -2,6 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../components/Button.js';
+import Logo from '../components/Logo.js';
 import { colors, fonts } from '../theme.js';
 
 const FEATURES = [
@@ -17,7 +18,9 @@ function WelcomeScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.content}>
         <View style={styles.hero}>
-          <Text style={styles.mark}>{'{ }'}</Text>
+          <View style={styles.markWrap}>
+            <Logo size={30} />
+          </View>
           <Text style={styles.eyebrow}>agentbridge</Text>
           <Text style={styles.title}>Your coding agent.{'\n'}Right in your pocket.</Text>
           <Text style={styles.subtitle}>
@@ -57,11 +60,7 @@ const styles = StyleSheet.create({
   hero: {
     marginTop: 40,
   },
-  mark: {
-    color: colors.success,
-    fontFamily: fonts.mono,
-    fontWeight: '700',
-    fontSize: 22,
+  markWrap: {
     marginBottom: 10,
   },
   eyebrow: {

@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext.js';
 import { AgentProvider } from './src/context/AgentContext.js';
+import LaunchScreen from './src/screens/LaunchScreen.js';
 import WelcomeScreen from './src/screens/WelcomeScreen.js';
 import LoginScreen from './src/screens/LoginScreen.js';
 import AgentsHomeScreen from './src/screens/AgentsHomeScreen.js';
@@ -32,7 +33,7 @@ function RootNavigator() {
   const { ready, user } = useAuth();
 
   if (!ready) {
-    return null;
+    return <LaunchScreen />;
   }
 
   return (

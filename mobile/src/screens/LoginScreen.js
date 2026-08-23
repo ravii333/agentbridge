@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext.js';
 import Button from '../components/Button.js';
+import Logo from '../components/Logo.js';
 import { colors, fonts, radii } from '../theme.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -77,7 +78,9 @@ function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.content}>
-          <Text style={styles.mark}>{'{ }'}</Text>
+          <View style={styles.markWrap}>
+            <Logo size={26} />
+          </View>
           <Text style={styles.title}>agentbridge</Text>
           <Text style={styles.subtitle}>{isRegister ? 'Create an account' : 'Log in'}</Text>
 
@@ -142,12 +145,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     gap: 12,
   },
-  mark: {
-    color: colors.success,
-    fontFamily: fonts.mono,
-    fontWeight: '700',
-    fontSize: 20,
-    textAlign: 'center',
+  markWrap: {
+    alignItems: 'center',
   },
   title: {
     color: colors.textDim,

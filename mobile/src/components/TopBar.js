@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../theme.js';
 import StatusChip from './StatusChip.js';
+import Logo from './Logo.js';
 
 function shortenPath(cwd) {
   if (!cwd) return null;
@@ -14,7 +15,7 @@ function TopBar({ state, cwd, agentName, onPressWorkspace, onPressAddAgent, onPr
   return (
     <View>
       <View style={styles.bar}>
-        <Text style={styles.mark}>{'{ }'}</Text>
+        <Logo size={16} />
         <Text style={styles.title}>agentbridge</Text>
         {onPressAddAgent && (
           <Pressable onPress={onPressAddAgent} hitSlop={8}>
@@ -50,11 +51,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
-  },
-  mark: {
-    color: colors.success,
-    fontFamily: fonts.mono,
-    fontWeight: '700',
   },
   title: {
     flex: 1,
