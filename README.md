@@ -2,13 +2,14 @@
 
 AgentBridge pairs an AI coding agent running on your PC with a mobile app, so you can watch it
 work and approve every tool call from your phone — like a self-hosted "remote control" for
-Claude Code (and, via a pluggable adapter layer, other coding CLIs over time).
+Claude Code and Codex CLI, via a pluggable adapter layer that more coding CLIs can join over time.
 
 ## Architecture
 
-- `agentbridge-client/` — runs on the machine with your coding CLI installed. Wraps the CLI (Claude
-  Code today, via `adapters/`), pairs with your account via a short device code, and relays
-  live output/approvals over a socket to the backend.
+- `agentbridge-client/` — runs on the machine with your coding CLI installed. Wraps the CLI
+  (Claude Code or Codex CLI today, via `adapters/`), pairs with your account via a short device
+  code, and relays live output/approvals over a socket to the backend. Published to npm as
+  `agentbridge`, runnable via `npx agentbridge`.
 - `backend/` — Express + Socket.io + MongoDB relay. JWT accounts, device-code pairing, a
   multi-agent registry (several paired machines per user), and per-user scoped run history.
 - `mobile/` — the real client (Expo/React Native). Login, connect/switch agents, live feed,
@@ -25,15 +26,26 @@ Claude Code (and, via a pluggable adapter layer, other coding CLIs over time).
    cp .env.example .env   # set MONGO_URI / JWT_SECRET
    npm run dev
    ```
-3. **agentbridge-client** (on the machine with `claude` installed and on `PATH`)
+3. **agentbridge-client** (on the machine with your coding CLI installed and on `PATH`)
+
+   Once published, this runs via `npx` from anywhere — no checkout needed:
+   ```
+   npx agentbridge
+   ```
+   Wraps Claude Code by default; for Codex CLI, put `AGENT_KIND=codex` in a `.env` file in
+   whichever folder you run that command from first. See `agentbridge-client/README.md` for the
+   full config table and how approvals differ between the two.
+
+   Working on agent-client itself? Run it from source instead:
    ```
    cd agentbridge-client
    npm install
-   cp .env.example .env   # set BACKEND_URL if not localhost
+   cp .env.example .env   # set BACKEND_URL if not localhost, AGENT_KIND if not Claude Code
    npm start
    ```
-   First run prints a short pairing code — enter it in the mobile app's "Add agent" screen to
-   link that machine to your account.
+
+   Either way, first run prints a short pairing code — enter it in the mobile app's "Add agent"
+   screen (it'll ask which CLI you're setting up) to link that machine to your account.
 4. **Mobile**
    ```
    cd mobile
@@ -57,7 +69,14 @@ the machine and phone respectively.
 
 ## Notes
 
-- `agentbridge-client` needs the CLI it's wrapping (`claude`, by default) installed and reachable.
-- Approval requests use a local-only HTTP server (`HOOK_SERVER_PORT`, default 8787) that the
-  CLI's hook mechanism calls before each tool use; nothing outside `agentbridge-client` can reach it.
+- `agentbridge-client` needs the CLI it's wrapping installed and reachable: `claude` for Claude
+  Code, `codex` for Codex CLI.
+- Approvals differ by adapter. Claude Code has real per-tool interactive approval via a local-only
+  HTTP server (`HOOK_SERVER_PORT`, default 8787) that its hook calls before each tool use, relayed
+  to your phone. Codex CLI's `codex exec` isn't interactive at all — there's no per-action prompt
+  to intercept, so `PERMISSION_MODE` instead picks its upfront sandbox policy for the whole run,
+  and the app shows that honestly rather than faking a prompt. Either way, nothing outside
+  `agentbridge-client` can reach that local server.
+- Running two agents on the same machine at once needs two `HOOK_SERVER_PORT` values — the
+  default will conflict between them.
 - See `VISION.md` for the fuller design rationale and roadmap.

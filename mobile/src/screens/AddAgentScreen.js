@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext.js';
 import { useAgent } from '../context/AgentContext.js';
@@ -8,35 +8,42 @@ import { claimAgent } from '../api/authApi.js';
 import Button from '../components/Button.js';
 import CodeInput from '../components/CodeInput.js';
 import SuccessCheck from '../components/SuccessCheck.js';
+import AGENT_KINDS from '../utils/agentKinds.js';
 import { colors, fonts, radii } from '../theme.js';
 
-const STEPS = [
-  {
-    n: '1',
-    title: 'Open a terminal on that computer',
-    body: 'The one running your coding CLI (Claude Code today).',
-  },
-  {
-    n: '2',
-    title: 'Run the agent',
-    body: 'In the agentbridge-client folder: npm install && npm start',
-    mono: true,
-  },
-  {
-    n: '3',
-    title: 'Copy the code it prints',
-    body: 'A short code like WXYZ-1234 — it expires after 10 minutes.',
-  },
-];
+function stepsFor(kind) {
+  const steps = [
+    {
+      n: '1',
+      title: 'Open a terminal on that computer',
+      body: `The one running ${kind.label}.`,
+    },
+    {
+      n: '2',
+      title: 'Run the agent',
+      body: kind.command,
+      mono: true,
+      note: kind.envNote,
+    },
+    {
+      n: '3',
+      title: 'Copy the code it prints',
+      body: 'A short code like WXYZ-1234 — it expires after 10 minutes.',
+    },
+  ];
+  return steps;
+}
 
 function AddAgentScreen() {
   const navigation = useNavigation();
   const { token } = useAuth();
   const { refreshAgents } = useAgent();
   const [stage, setStage] = useState('instructions'); // instructions -> code -> success
+  const [kind, setKind] = useState(AGENT_KINDS[0]);
   const [code, setCode] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const steps = stepsFor(kind);
 
   const submit = async () => {
     setError(null);
@@ -61,8 +68,21 @@ function AddAgentScreen() {
             <Text style={styles.title}>Connect a new agent</Text>
             <Text style={styles.body}>Get your agent talking to this phone in three steps.</Text>
 
+            <Text style={styles.kindLabel}>Which are you setting up?</Text>
+            <View style={styles.kindRow}>
+              {AGENT_KINDS.map((k) => (
+                <Pressable
+                  key={k.id}
+                  style={[styles.kindChip, k.id === kind.id && styles.kindChipActive]}
+                  onPress={() => setKind(k)}
+                >
+                  <Text style={[styles.kindChipText, k.id === kind.id && styles.kindChipTextActive]}>{k.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
             <View style={styles.steps}>
-              {STEPS.map((step) => (
+              {steps.map((step) => (
                 <View key={step.n} style={styles.stepRow}>
                   <View style={styles.stepN}>
                     <Text style={styles.stepNText}>{step.n}</Text>
@@ -70,6 +90,7 @@ function AddAgentScreen() {
                   <View style={styles.stepText}>
                     <Text style={styles.stepTitle}>{step.title}</Text>
                     <Text style={[styles.stepBody, step.mono && styles.stepMono]}>{step.body}</Text>
+                    {step.note && <Text style={styles.stepNote}>{step.note}</Text>}
                   </View>
                 </View>
               ))}
@@ -156,6 +177,40 @@ const styles = StyleSheet.create({
   codeHighlight: {
     color: colors.accent,
   },
+  kindLabel: {
+    color: colors.textFaint,
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  kindRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  kindChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  kindChipActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentDim,
+  },
+  kindChipText: {
+    color: colors.textDim,
+    fontFamily: fonts.mono,
+    fontSize: 12,
+  },
+  kindChipTextActive: {
+    color: colors.accent,
+    fontWeight: '700',
+  },
   steps: {
     gap: 18,
     marginBottom: 20,
@@ -196,6 +251,13 @@ const styles = StyleSheet.create({
   },
   stepMono: {
     color: colors.accent,
+  },
+  stepNote: {
+    color: colors.queued,
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 4,
   },
   error: {
     color: colors.error,

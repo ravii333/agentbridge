@@ -5,11 +5,15 @@ import * as agentRunner from './agentRunner.js';
 import * as workspace from './workspace.js';
 import * as approvalServer from './approvalServer.js';
 import * as pairing from './pairing.js';
+import { getAdapter } from './adapters/index.js';
 import config from './config.js';
 
 const agentId = `${os.hostname()}-${process.pid}`;
 
 async function startAgentClient() {
+  const adapter = getAdapter(config.AGENT_KIND);
+  console.log(`Detected: ${adapter.label} (${config.CLAUDE_BIN})`);
+
   const { agentToken } = await pairing.getCredentials();
   const socket = socketClient.connect(agentToken);
 

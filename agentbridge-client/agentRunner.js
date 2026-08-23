@@ -7,6 +7,7 @@ import * as approvalServer from './approvalServer.js';
 import { getAdapter } from './adapters/index.js';
 
 const adapter = getAdapter(config.AGENT_KIND);
+const bin = config.CLAUDE_BIN || adapter.defaultBin;
 
 let logCallback = () => {};
 let statusCallback = () => {};
@@ -73,7 +74,7 @@ async function start() {
   }
 
   try {
-    await adapter.checkBinary(config.CLAUDE_BIN);
+    await adapter.checkBinary(bin);
   } catch (error) {
     lastError = { message: error.message, at: new Date().toISOString() };
     setState('error');
@@ -126,7 +127,7 @@ function runJob({ runId, command }) {
     setState('running');
 
     const spawnSpec = adapter.buildSpawn({
-      bin: config.CLAUDE_BIN,
+      bin,
       cwd: workspace.getWorkspace(),
       command,
       sessionId,

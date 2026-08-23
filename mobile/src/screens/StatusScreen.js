@@ -31,6 +31,7 @@ function StatusScreen() {
       <TopBar
         state={state}
         agentName={activeAgent?.name}
+        agentKind={status?.agentKind}
         onPressAgents={() => setPickerVisible(true)}
         onPressAddAgent={() => navigation.navigate('AddAgent')}
       />

@@ -39,6 +39,7 @@ function LiveFeedScreen() {
         state={status?.state}
         cwd={status?.cwd}
         agentName={activeAgent?.name}
+        agentKind={status?.agentKind}
         onPressAgents={() => setAgentPickerVisible(true)}
         onPressWorkspace={() => setPickerVisible(true)}
         onPressAddAgent={() => navigation.navigate('AddAgent')}

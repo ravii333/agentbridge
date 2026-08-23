@@ -1,10 +1,7 @@
-const LABELS = {
-  'claude-code': 'Claude Code',
-  codex: 'Codex',
-};
+import AGENT_KINDS from './agentKinds.js';
 
 function agentKindLabel(kind) {
-  return LABELS[kind] || null;
+  return AGENT_KINDS.find((k) => k.id === kind)?.label || null;
 }
 
 export default agentKindLabel;

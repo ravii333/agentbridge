@@ -10,7 +10,10 @@ const AGENT_CWD = process.env.AGENT_CWD || os.homedir();
 // AGENT_MODEL are the generic aliases new adapters (and users running a
 // non-Claude CLI) should use going forward.
 const AGENT_KIND = process.env.AGENT_KIND || 'claude-code';
-const CLAUDE_BIN = process.env.AGENT_BIN || process.env.CLAUDE_BIN || 'claude';
+// No hardcoded fallback here - a bare "claude" default would be wrong for
+// AGENT_KIND=codex. Falls through to the selected adapter's own defaultBin
+// in agentRunner.js when unset.
+const CLAUDE_BIN = process.env.AGENT_BIN || process.env.CLAUDE_BIN || '';
 const AGENT_TOKEN = process.env.AGENT_TOKEN || '';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 const CLAUDE_MODEL = process.env.AGENT_MODEL || process.env.CLAUDE_MODEL || '';

@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../theme.js';
 import StatusChip from './StatusChip.js';
 import Logo from './Logo.js';
+import agentKindLabel from '../utils/agentKindLabel.js';
 
 function shortenPath(cwd) {
   if (!cwd) return null;
@@ -9,8 +10,9 @@ function shortenPath(cwd) {
   return parts.length > 2 ? `…/${parts.slice(-2).join('/')}` : cwd;
 }
 
-function TopBar({ state, cwd, agentName, onPressWorkspace, onPressAddAgent, onPressAgents }) {
+function TopBar({ state, cwd, agentName, agentKind, onPressWorkspace, onPressAddAgent, onPressAgents }) {
   const label = shortenPath(cwd);
+  const kindLabel = agentKindLabel(agentKind);
 
   return (
     <View>
@@ -29,6 +31,7 @@ function TopBar({ state, cwd, agentName, onPressWorkspace, onPressAddAgent, onPr
         <Pressable style={styles.workspaceRow} onPress={onPressAgents}>
           <Text style={styles.workspaceLabel} numberOfLines={1}>
             {agentName || 'select agent'}
+            {kindLabel ? ` · ${kindLabel}` : ''}
           </Text>
         </Pressable>
       )}
