@@ -4,6 +4,27 @@ AgentBridge pairs an AI coding agent running on your PC with a mobile app, so yo
 work and approve every tool call from your phone — like a self-hosted "remote control" for
 Claude Code and Codex CLI, via a pluggable adapter layer that more coding CLIs can join over time.
 
+## Features
+
+- **Remote monitoring** — watch your coding agent's live output/tool calls from your phone as it works, not just the final result.
+- **Per-tool approvals with diff view** — for adapters that support it (Claude Code today), approve or deny each tool call from the mobile app before it runs, with a diff of the change.
+- **Multi-agent, multi-device** — pair multiple machines/agents to one account and switch between them from the app.
+- **Workspace picker** — choose which working directory an agent operates in, from the phone.
+- **Run history** — past runs are persisted per user and browsable in the app.
+- **Device-code pairing** — link a new machine by entering a short code in the app, no manual token copying.
+- **Pluggable adapters** — Claude Code and Codex CLI supported today via `agentbridge-client/adapters/`; more CLIs can be added the same way.
+- **Self-hostable** — run your own backend + MongoDB relay (Docker Compose provided) instead of depending on a hosted one.
+
+## Tech Stack
+
+| Component | Stack |
+|---|---|
+| `agentbridge-client/` | Node.js, Socket.io client, `dotenv`; published to npm as `agentbridge` |
+| `backend/` | Node.js, Express, Socket.io, MongoDB (Mongoose), JWT (`jsonwebtoken`), `bcryptjs`, `express-rate-limit` |
+| `mobile/` | Expo / React Native, React Navigation, `expo-secure-store`, Socket.io client |
+| `frontend/` | React, Vite |
+| Infra | Docker / Docker Compose (backend + MongoDB) |
+
 ## Architecture
 
 - `agentbridge-client/` — runs on the machine with your coding CLI installed. Wraps the CLI
@@ -13,7 +34,8 @@ Claude Code and Codex CLI, via a pluggable adapter layer that more coding CLIs c
 - `backend/` — Express + Socket.io + MongoDB relay. JWT accounts, device-code pairing, a
   multi-agent registry (several paired machines per user), and per-user scoped run history.
 - `mobile/` — the real client (Expo/React Native). Login, connect/switch agents, live feed,
-  approval prompts with diff view, workspace picker, run history.
+  approval prompts with diff view, workspace picker, run history. Ships with real AgentBridge
+  branding (logo, launch screen, app icons — see `mobile/assets/brand/`).
 - `frontend/` — the project's public landing page (not a dashboard — that's `mobile/`'s job).
 
 ## Run it locally
@@ -80,3 +102,7 @@ the machine and phone respectively.
 - Running two agents on the same machine at once needs two `HOOK_SERVER_PORT` values — the
   default will conflict between them.
 - See `VISION.md` for the fuller design rationale and roadmap.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
