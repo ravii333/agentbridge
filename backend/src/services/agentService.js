@@ -54,16 +54,22 @@ function isConnected(agentId) {
   return agents.has(agentId);
 }
 
-// Mobile doesn't expose an agent switcher yet, so a user's frontend
-// socket is routed to whichever of their agents is currently connected.
+// Fallback for sockets that haven't called frontend:select-agent yet: if the
+// user has exactly one connected agent, route to it. With more than one,
+// guessing (e.g. "first in the Map") risks silently sending a command to the
+// wrong device, so return null and let the caller surface "select an agent".
 function resolveAgentId(userId) {
   if (!userId) {
     return agents.has(LEGACY_AGENT_ID) ? LEGACY_AGENT_ID : null;
   }
+  let match = null;
   for (const [agentId, entry] of agents) {
-    if (entry.userId === userId) return agentId;
+    if (entry.userId === userId) {
+      if (match) return null;
+      match = agentId;
+    }
   }
-  return null;
+  return match;
 }
 
 function getStatus(agentId) {

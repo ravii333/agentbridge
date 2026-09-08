@@ -1,4 +1,5 @@
-import { spawn, execFile } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import spawn from 'cross-spawn';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import config from './config.js';
@@ -136,22 +137,13 @@ function runJob({ runId, command }) {
       settingsPath,
     });
 
-    // On Windows, spawn() needs shell:true to resolve .cmd-shimmed binaries
-    // (npm-installed CLIs) - but shell:true just concatenates args with a
-    // space, unquoted. Any arg containing a space (a prompt, a --settings
-    // path under a "Users\Some Name" home dir, ...) would silently split
-    // into multiple arguments. Quote everything ourselves and pass one
-    // command string instead of relying on Node's raw concatenation.
-    const useShell = process.platform === 'win32';
-    const commandLine = useShell
-      ? [spawnSpec.cmd, ...spawnSpec.args]
-          .map((part) => (/[\s"]/.test(part) ? `"${part.replace(/"/g, '\\"')}"` : part))
-          .join(' ')
-      : spawnSpec.cmd;
-
-    const child = spawn(commandLine, useShell ? [] : spawnSpec.args, {
+    // cross-spawn resolves Windows .cmd-shimmed binaries (npm-installed CLIs)
+    // and escapes each argument for CreateProcess directly, without ever
+    // handing the command line to cmd.exe for interpretation. That avoids
+    // the shell:true approach's injection risk, where prompt text containing
+    // &, |, ^, etc. would be parsed as shell metacharacters even when quoted.
+    const child = spawn(spawnSpec.cmd, spawnSpec.args, {
       cwd: spawnSpec.cwd || workspace.getWorkspace(),
-      shell: useShell,
       windowsHide: true,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, ...(spawnSpec.env || {}) },

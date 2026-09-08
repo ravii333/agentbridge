@@ -6,3 +6,13 @@
 import { config } from 'dotenv';
 
 config();
+
+// Fail fast on boot rather than silently running with a forgeable JWT secret
+// or connecting to an unintended default database.
+const REQUIRED = ['JWT_SECRET', 'MONGO_URI'];
+const missing = REQUIRED.filter((key) => !process.env[key]);
+
+if (missing.length > 0) {
+  console.error(`Missing required environment variable(s): ${missing.join(', ')}`);
+  process.exit(1);
+}

@@ -18,10 +18,12 @@ async function startAgentClient() {
   const socket = socketClient.connect(agentToken);
 
   approvalServer.init({ socket, getCurrentRunId: () => agentRunner.getStatus().currentRunId });
-  try {
+  if (adapter.capabilities.approval === 'hook') {
+    // Claude Code's per-tool approval depends entirely on this server: if it
+    // fails to bind (e.g. HOOK_SERVER_PORT already in use), Claude Code would
+    // otherwise launch with no PreToolUse hook configured at all and run
+    // unguarded. Fail startup instead of degrading silently.
     await approvalServer.start();
-  } catch (error) {
-    console.error('Approval hook server failed to start:', error.message);
   }
 
   socket.on('connect', async () => {
@@ -91,9 +93,15 @@ async function startAgentClient() {
   });
 }
 
-startAgentClient();
+startAgentClient().catch((error) => {
+  console.error('Failed to start agentbridge:', error.message);
+  process.exit(1);
+});
 
-process.on('SIGINT', async () => {
+async function shutdownAndExit() {
   await agentRunner.shutdown();
   process.exit(0);
-});
+}
+
+process.on('SIGINT', shutdownAndExit);
+process.on('SIGTERM', shutdownAndExit);

@@ -1,7 +1,7 @@
 // This module provides a starter JWT interface for future auth expansion.
 import jwt from 'jsonwebtoken';
 
-const SECRET = process.env.JWT_SECRET || 'agentbridge-secret';
+const SECRET = process.env.JWT_SECRET;
 
 function sign(payload, expiresIn = '1h') {
   return jwt.sign(payload, SECRET, { expiresIn });

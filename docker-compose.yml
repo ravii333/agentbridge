@@ -4,8 +4,11 @@ services:
     restart: unless-stopped
     volumes:
       - mongo-data:/data/db
-    ports:
-      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?set MONGO_ROOT_USERNAME in .env before running}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in .env before running}
+    # No host port mapping: only the backend service (same Docker network)
+    # needs to reach Mongo. Add "27017:27017" back only for local debugging.
 
   backend:
     build: ./backend
@@ -13,7 +16,7 @@ services:
     depends_on:
       - mongo
     environment:
-      MONGO_URI: mongodb://mongo:27017/agentbridge
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/agentbridge?authSource=admin
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env before running}
       PORT: 4000
     ports:

@@ -1,13 +1,12 @@
-import { execFile } from 'node:child_process';
+import spawn from 'cross-spawn';
 
 function checkBinary(bin) {
   return new Promise((resolve, reject) => {
-    execFile(bin, ['--version'], { shell: process.platform === 'win32' }, (error) => {
-      if (error) {
-        reject(new Error(`codex CLI not found or failed to run (${bin}): ${error.message}`));
-        return;
-      }
-      resolve();
+    const child = spawn(bin, ['--version'], { windowsHide: true, stdio: 'ignore' });
+    child.on('error', (error) => reject(new Error(`codex CLI not found or failed to run (${bin}): ${error.message}`)));
+    child.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`codex CLI not found or failed to run (${bin}): exited with code ${code}`));
     });
   });
 }

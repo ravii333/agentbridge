@@ -2,7 +2,13 @@
   "name": "agentbridge",
   "version": "0.1.0",
   "description": "Pair the AI coding agent running on your PC (Claude Code, and more over time) with the AgentBridge mobile app.",
-  "keywords": ["claude-code", "ai-agent", "remote-control", "cli", "mobile"],
+  "keywords": [
+    "claude-code",
+    "ai-agent",
+    "remote-control",
+    "cli",
+    "mobile"
+  ],
   "author": "Ravi Kumar",
   "license": "MIT",
   "repository": {
@@ -32,6 +38,7 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "cross-spawn": "^7.0.6",
     "dotenv": "^16.4.5",
     "socket.io-client": "^4.7.2"
   }
