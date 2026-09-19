@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import Agent from '../models/agentModel.js';
-import { isConnected } from '../services/agentService.js';
 
 const USER_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const PAIRING_TTL_MS = 10 * 60 * 1000;
@@ -94,7 +93,7 @@ async function listAgents(req, res) {
       id: agent._id.toString(),
       name: agent.name,
       kind: agent.kind,
-      connected: isConnected(agent._id.toString()),
+      connected: agent.connected,
       lastSeenAt: agent.lastSeenAt,
     })),
   });

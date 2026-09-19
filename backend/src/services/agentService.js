@@ -1,11 +1,23 @@
 import mongoose from 'mongoose';
 import Command from '../models/commandModel.js';
 import Log from '../models/logModel.js';
+import Agent from '../models/agentModel.js';
 
 const LEGACY_AGENT_ID = 'legacy';
 
 let io = null;
-const agents = new Map(); // agentId -> { socket, userId, status }
+
+// The legacy shared-secret agent is a single global dev/dashboard identity
+// (see utils/auth.js) with no per-agent Mongo document, so it stays local-
+// process-only rather than persisted for cross-instance lookup. It is not
+// recommended for production/multi-instance use (see backend/.env.example).
+const legacyAgent = { socket: null, status: null };
+
+// Per-instance cache of locally-connected real agents: { socket, status,
+// userId }. Cross-instance presence/status for real agents lives on the
+// Agent document (connected/liveStatus fields below) instead - this cache
+// is just a fast path + ownership check for this process's own sockets.
+const localAgents = new Map();
 
 function setIo(serverIo) {
   io = serverIo;
@@ -15,12 +27,16 @@ function targetRoom(userId) {
   return userId ? `user:${userId}` : 'legacy';
 }
 
+function agentRoom(agentId) {
+  return `agent:${agentId}`;
+}
+
 function broadcast(userId, event, payload) {
   if (io) io.to(targetRoom(userId)).emit(event, payload);
 }
 
-function registerAgent({ agentId, userId, socket }) {
-  const status = {
+function initialStatus(agentId) {
+  return {
     agentId,
     state: 'idle',
     sessionId: null,
@@ -29,59 +45,89 @@ function registerAgent({ agentId, userId, socket }) {
     cwd: null,
     updatedAt: new Date().toISOString(),
   };
-  agents.set(agentId, { socket, userId, status });
+}
+
+async function registerAgent({ agentId, userId, socket }) {
+  const status = initialStatus(agentId);
+
+  if (agentId === LEGACY_AGENT_ID) {
+    legacyAgent.socket = socket;
+    legacyAgent.status = status;
+  } else {
+    localAgents.set(agentId, { socket, status, userId });
+    await Agent.updateOne({ _id: agentId }, { connected: true, liveStatus: status }).catch(() => {});
+  }
+
   broadcast(userId, 'agent:status', status);
 
-  socket.on('disconnect', () => {
-    const entry = agents.get(agentId);
-    if (entry && entry.socket === socket) {
-      entry.status = { ...entry.status, state: 'offline', updatedAt: new Date().toISOString() };
-      broadcast(userId, 'agent:status', entry.status);
-      agents.delete(agentId);
+  socket.on('disconnect', async () => {
+    if (agentId === LEGACY_AGENT_ID) {
+      if (legacyAgent.socket !== socket) return;
+      legacyAgent.socket = null;
+      legacyAgent.status = { ...legacyAgent.status, state: 'offline', updatedAt: new Date().toISOString() };
+      broadcast(userId, 'agent:status', legacyAgent.status);
+      return;
     }
+
+    const entry = localAgents.get(agentId);
+    if (!entry || entry.socket !== socket) return;
+    localAgents.delete(agentId);
+    const offlineStatus = { ...entry.status, state: 'offline', updatedAt: new Date().toISOString() };
+    await Agent.updateOne({ _id: agentId }, { connected: false, liveStatus: offlineStatus }).catch(() => {});
+    broadcast(userId, 'agent:status', offlineStatus);
   });
-}
-
-function getAgentEntry(agentId) {
-  return agents.get(agentId);
-}
-
-function getAgentSocket(agentId) {
-  return agents.get(agentId)?.socket || null;
-}
-
-function isConnected(agentId) {
-  return agents.has(agentId);
 }
 
 // Fallback for sockets that haven't called frontend:select-agent yet: if the
 // user has exactly one connected agent, route to it. With more than one,
-// guessing (e.g. "first in the Map") risks silently sending a command to the
-// wrong device, so return null and let the caller surface "select an agent".
-function resolveAgentId(userId) {
+// guessing risks silently sending a command to the wrong device, so return
+// null and let the caller surface "select an agent".
+async function resolveAgentId(userId) {
   if (!userId) {
-    return agents.has(LEGACY_AGENT_ID) ? LEGACY_AGENT_ID : null;
+    return legacyAgent.socket ? LEGACY_AGENT_ID : null;
   }
-  let match = null;
-  for (const [agentId, entry] of agents) {
-    if (entry.userId === userId) {
-      if (match) return null;
-      match = agentId;
-    }
-  }
-  return match;
+  const connected = await Agent.find({ userId, connected: true }).select('_id').lean();
+  if (connected.length !== 1) return null;
+  return connected[0]._id.toString();
 }
 
-function getStatus(agentId) {
-  return agents.get(agentId)?.status || { state: 'offline' };
+async function isConnected(agentId) {
+  if (!agentId) return false;
+  if (agentId === LEGACY_AGENT_ID) return Boolean(legacyAgent.socket);
+  if (localAgents.has(agentId)) return true;
+  const agent = await Agent.findById(agentId).select('connected').lean();
+  return Boolean(agent?.connected);
 }
 
-function updateStatus(agentId, newStatus) {
-  const entry = agents.get(agentId);
-  if (!entry) return null;
-  entry.status = { ...entry.status, ...newStatus, agentId, updatedAt: new Date().toISOString() };
-  broadcast(entry.userId, 'agent:status', entry.status);
-  return entry.status;
+async function getStatus(agentId) {
+  if (!agentId) return { state: 'offline' };
+  if (agentId === LEGACY_AGENT_ID) {
+    return legacyAgent.status || { state: 'offline' };
+  }
+  const local = localAgents.get(agentId);
+  if (local) return local.status;
+  const agent = await Agent.findById(agentId).select('liveStatus connected').lean();
+  if (!agent) return { state: 'offline' };
+  return agent.liveStatus || { state: agent.connected ? 'idle' : 'offline' };
+}
+
+async function updateStatus(agentId, newStatus) {
+  if (agentId === LEGACY_AGENT_ID) {
+    if (!legacyAgent.socket) return null;
+    legacyAgent.status = { ...legacyAgent.status, ...newStatus, agentId, updatedAt: new Date().toISOString() };
+    broadcast(null, 'agent:status', legacyAgent.status);
+    return legacyAgent.status;
+  }
+
+  const local = localAgents.get(agentId);
+  const merged = { ...(local?.status || {}), ...newStatus, agentId, updatedAt: new Date().toISOString() };
+  if (local) local.status = merged;
+
+  const agent = await Agent.findByIdAndUpdate(agentId, { liveStatus: merged }, { new: true }).select('userId').lean();
+  if (!agent) return null;
+
+  broadcast(agent.userId ? agent.userId.toString() : local?.userId || null, 'agent:status', merged);
+  return merged;
 }
 
 async function saveLog(agentId, userId, logEvent) {
@@ -117,15 +163,17 @@ function summarizeLog(logEvent) {
   }
 }
 
+// Routed via the agent's room rather than a direct socket reference, so it
+// reaches the agent regardless of which backend instance its socket is
+// connected to (the mongo-adapter fans room emits out across instances).
 async function forwardCommand(userId, command, runId, explicitAgentId) {
-  const agentId = explicitAgentId || resolveAgentId(userId);
-  const entry = agentId ? agents.get(agentId) : null;
+  const agentId = explicitAgentId || (await resolveAgentId(userId));
 
   const record = new Command({ command, userId: userId || null, agentId: agentId || null });
   await record.save();
 
-  if (entry?.socket) {
-    entry.socket.emit('agent:command', { runId, command });
+  if (agentId && (await isConnected(agentId))) {
+    io?.to(agentRoom(agentId)).emit('agent:command', { runId, command });
     return true;
   }
 
@@ -133,14 +181,14 @@ async function forwardCommand(userId, command, runId, explicitAgentId) {
   return false;
 }
 
-function forwardCancel(userId, runId, explicitAgentId) {
-  const agentId = explicitAgentId || resolveAgentId(userId);
-  agents.get(agentId)?.socket?.emit('agent:cancel', { runId });
+async function forwardCancel(userId, runId, explicitAgentId) {
+  const agentId = explicitAgentId || (await resolveAgentId(userId));
+  if (agentId) io?.to(agentRoom(agentId)).emit('agent:cancel', { runId });
 }
 
-function forwardApprovalResponse(userId, payload, explicitAgentId) {
-  const agentId = explicitAgentId || resolveAgentId(userId);
-  agents.get(agentId)?.socket?.emit('agent:approval-response', payload);
+async function forwardApprovalResponse(userId, payload, explicitAgentId) {
+  const agentId = explicitAgentId || (await resolveAgentId(userId));
+  if (agentId) io?.to(agentRoom(agentId)).emit('agent:approval-response', payload);
 }
 
 async function listRuns(userId, limit = 50) {
@@ -196,11 +244,10 @@ export {
   LEGACY_AGENT_ID,
   setIo,
   registerAgent,
-  getAgentEntry,
-  getAgentSocket,
   isConnected,
   resolveAgentId,
   targetRoom,
+  agentRoom,
   getStatus,
   saveLog,
   forwardCommand,

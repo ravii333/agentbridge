@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { LEGACY_AGENT_ID, getStatus as getAgentStatus, forwardCommand, listRuns, getRunLogs } from '../services/agentService.js';
 
-const getStatus = (req, res) => {
-  const status = getAgentStatus(LEGACY_AGENT_ID);
+const getStatus = async (req, res) => {
+  const status = await getAgentStatus(LEGACY_AGENT_ID);
   res.json({ status });
 };
 

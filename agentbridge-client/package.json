@@ -35,7 +35,9 @@
     "node": ">=18"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test",
+    "prepublishOnly": "npm test"
   },
   "dependencies": {
     "cross-spawn": "^7.0.6",

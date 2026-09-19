@@ -78,6 +78,11 @@ Claude Code and Codex CLI, via a pluggable adapter layer that more coding CLIs c
    npm start
    ```
 
+   To test on the laptop only, with no phone or emulator needed, run `npm run web` instead — it
+   opens the app in your browser and talks to `localhost` out of the box. Native-only APIs
+   (`expo-secure-store`) fall back to browser storage automatically, so this is for quick UI/flow
+   testing, not a substitute for testing on a real device before release.
+
 ## Self-hosting the relay with Docker
 
 If you're hosting the backend + MongoDB for yourself or a team rather than running Mongo by
@@ -104,6 +109,70 @@ the machine and phone respectively.
 - Running two agents on the same machine at once needs two `HOOK_SERVER_PORT` values — the
   default will conflict between them.
 - See `VISION.md` for the fuller design rationale and roadmap.
+
+## Production release
+
+Deploy the backend first, then publish the npm client and native app against its public HTTPS URL.
+
+### 1. Deploy the backend
+
+- Create production MongoDB credentials and a long, random `JWT_SECRET`.
+- Set `CORS_ORIGIN` to the comma-separated origins of any browser clients. Native Expo apps do
+  not need a browser origin.
+- Deploy `docker-compose.yml` behind HTTPS. Do not expose MongoDB publicly.
+- Confirm `GET /healthz` reports `{ "status": "ok", "db": "up" }`.
+
+### 2. Publish the npm client
+
+From `agentbridge-client/`:
+
+```sh
+npm ci
+npm test
+npm pack --dry-run
+npm login
+npm publish
+```
+
+Before publishing, set a unique semver version in `agentbridge-client/package.json` and verify
+that the npm name `agentbridge` is available to your account. `npm pack --dry-run` confirms that
+credentials, tests, and unrelated repository files are excluded. Users point the CLI at your
+relay with `BACKEND_URL=https://your-relay.example`; Codex users additionally set
+`AGENT_KIND=codex`.
+
+### 3. Build and submit the mobile app
+
+Before the first store build, set identifiers you own permanently in `mobile/app.json`:
+
+```json
+{
+  "ios": { "bundleIdentifier": "com.yourcompany.agentbridge" },
+  "android": { "package": "com.yourcompany.agentbridge" }
+}
+```
+
+Then sign into the intended Expo account and run:
+
+```sh
+cd mobile
+npx eas login
+npx eas build:configure
+npx eas build --profile preview --platform all
+npx eas build --profile production --platform all
+npx eas submit --profile production --platform all
+```
+
+For production, use a public HTTPS value for `EXPO_PUBLIC_BACKEND_URL`, never a LAN address or
+`localhost`.
+
+### Final acceptance test
+
+1. Register a fresh user in a production build.
+2. Pair one Claude Code client and one Codex client from separate terminals.
+3. Confirm the hostname and agent kind appear correctly in the app.
+4. Send a harmless read-only request to both and confirm live logs and history arrive.
+5. For Claude, approve and deny a tool call. For Codex, confirm the selected sandbox policy is
+   displayed and respected.
 
 ## License
 

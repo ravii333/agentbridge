@@ -4,14 +4,14 @@ import http from 'node:http';
 import mongoose from 'mongoose';
 import app from './app.js';
 import connectDB from './config/db.js';
-import { attach } from './sockets/socketManager.js';
+import { attach, close as closeSockets } from './sockets/socketManager.js';
 
 const PORT = process.env.PORT || 4000;
 
 async function startServer() {
   await connectDB();
   const server = http.createServer(app);
-  attach(server);
+  await attach(server);
 
   server.listen(PORT, () => {
     console.log(`AgentBridge backend listening on http://localhost:${PORT}`);
@@ -19,9 +19,12 @@ async function startServer() {
 
   async function shutdown(signal) {
     console.log(`${signal} received, shutting down`);
-    server.close(() => {
-      console.log('HTTP server closed');
-    });
+    // Close sockets (drains connected agent/frontend clients) and the HTTP
+    // server before disconnecting Mongo, so in-flight requests/commands get
+    // a chance to finish instead of erroring mid-write.
+    await closeSockets();
+    await new Promise((resolve) => server.close(resolve));
+    console.log('HTTP server closed');
     try {
       await mongoose.disconnect();
     } catch {

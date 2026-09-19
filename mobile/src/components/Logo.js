@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing } from 'react-native';
+import { Animated, Easing, Platform } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { colors } from '../theme.js';
 
@@ -48,7 +48,10 @@ function Logo({ size = 28, dim = false, cables = true, animated = false }) {
       <Circle cx="78" cy="58" r="9" stroke={ring} strokeWidth={5} />
       <Path d="M22 58 C 34 30, 66 30, 78 58" stroke={accent} strokeWidth={5.5} strokeLinecap="round" />
       {cables && (
-        animated
+        // react-native-svg's Animated components crash on web (its .web
+        // build doesn't support Animated.createAnimatedComponent the same
+        // way), so fall back to the static cables there.
+        animated && Platform.OS !== 'web'
           ? CABLE_X.map((x, i) => (
               <AnimatedPath
                 key={x}

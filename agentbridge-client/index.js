@@ -12,7 +12,8 @@ const agentId = `${os.hostname()}-${process.pid}`;
 
 async function startAgentClient() {
   const adapter = getAdapter(config.AGENT_KIND);
-  console.log(`Detected: ${adapter.label} (${config.CLAUDE_BIN})`);
+  const agentBin = config.CLAUDE_BIN || adapter.defaultBin;
+  console.log(`Using ${adapter.label} (${agentBin})`);
 
   const { agentToken } = await pairing.getCredentials();
   const socket = socketClient.connect(agentToken);
@@ -29,17 +30,23 @@ async function startAgentClient() {
   socket.on('connect', async () => {
     console.log('Connected to AgentBridge backend via socket');
 
+    // Register before start() emits its first status. Otherwise a quick
+    // successful start is emitted while the server has no agent registration
+    // and the mobile app only receives a generic status.
+    socket.emit('agent:ready', {
+      agentId,
+      name: os.hostname(),
+      cwd: workspace.getWorkspace(),
+      agentKind: adapter.id,
+      model: config.CLAUDE_MODEL || undefined,
+    });
+
     try {
       await agentRunner.start();
     } catch (error) {
       console.error('Agent runner failed to start:', error.message);
     }
 
-    socket.emit('agent:ready', {
-      agentId,
-      cwd: workspace.getWorkspace(),
-      model: config.CLAUDE_MODEL || undefined,
-    });
     socket.emit('agent:status', agentRunner.getStatus());
   });
 

@@ -12,6 +12,12 @@ const agentSchema = new mongoose.Schema({
   expiresAt: { type: Date, required: true },
   lastSeenAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
+  // Live connection/presence state, updated on socket connect/disconnect and
+  // status events. Persisted (rather than only in-memory) so any backend
+  // instance can answer "is this agent connected" / "what's its status" -
+  // see services/agentService.js.
+  connected: { type: Boolean, default: false },
+  liveStatus: { type: mongoose.Schema.Types.Mixed, default: null },
 });
 
 export default mongoose.model('Agent', agentSchema);

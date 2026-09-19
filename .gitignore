@@ -1,4 +1,15 @@
-node_modules
-dist
+# Runtime configuration and credentials
 .env
+.env.*
+!.env.example
+
+# Dependencies and generated artifacts
+node_modules/
+dist/
+.expo/
+coverage/
+*.tgz
+
+# Local client pairing credentials (normally stored outside the repository)
+.agentbridge/
 .DS_Store

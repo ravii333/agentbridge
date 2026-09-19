@@ -20,8 +20,12 @@ function loadSavedCredentials() {
 }
 
 function saveCredentials(data) {
-  mkdirSync(CREDENTIALS_DIR, { recursive: true });
-  writeFileSync(CREDENTIALS_PATH, JSON.stringify(data, null, 2));
+  // 0o700/0o600: the agent token in this file grants remote command
+  // execution on this machine, so keep it unreadable to other local users
+  // (chmod is a no-op on Windows, where NTFS ACLs already scope the file to
+  // the owning account by default).
+  mkdirSync(CREDENTIALS_DIR, { recursive: true, mode: 0o700 });
+  writeFileSync(CREDENTIALS_PATH, JSON.stringify(data, null, 2), { mode: 0o600 });
 }
 
 function sleep(ms) {

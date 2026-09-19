@@ -19,4 +19,14 @@ const pairingLimiter = rateLimit({
   message: { error: 'Too many attempts, please try again later' },
 });
 
-export { authLimiter, pairingLimiter };
+// Command execution reaches a real shell on the paired PC, so it gets its
+// own (tighter than auth) limiter independent of the generic auth one.
+const commandLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many commands, please slow down' },
+});
+
+export { authLimiter, pairingLimiter, commandLimiter };

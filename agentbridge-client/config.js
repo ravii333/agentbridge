@@ -3,6 +3,16 @@ import os from 'node:os';
 
 loadEnv();
 
+function positiveIntegerEnv(name, fallback) {
+  const value = process.env[name];
+  if (value === undefined || value === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${name} must be a positive integer`);
+  }
+  return parsed;
+}
+
 const AGENT_CWD = process.env.AGENT_CWD || os.homedir();
 // AGENT_KIND selects which adapter in ./adapters drives this agent (see
 // adapters/index.js). CLAUDE_BIN/CLAUDE_MODEL are kept as the historical env
@@ -20,9 +30,9 @@ const CLAUDE_BIN = process.env.AGENT_BIN || (AGENT_KIND === 'claude-code' ? proc
 const AGENT_TOKEN = process.env.AGENT_TOKEN || '';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 const CLAUDE_MODEL = process.env.AGENT_MODEL || process.env.CLAUDE_MODEL || '';
-const MAX_QUEUE = Number(process.env.MAX_QUEUE || 10);
+const MAX_QUEUE = positiveIntegerEnv('MAX_QUEUE', 10);
 const PERMISSION_MODE = process.env.PERMISSION_MODE || 'default';
-const HOOK_SERVER_PORT = Number(process.env.HOOK_SERVER_PORT || 8787);
+const HOOK_SERVER_PORT = positiveIntegerEnv('HOOK_SERVER_PORT', 8787);
 
 export default {
   AGENT_CWD,

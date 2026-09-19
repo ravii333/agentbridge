@@ -2,6 +2,12 @@ services:
   mongo:
     image: mongo:7
     restart: unless-stopped
+    # Single-node replica set: required for change streams, which the
+    # backend's socket.io mongo-adapter uses to fan broadcasts out across
+    # multiple backend instances (see backend/src/sockets/socketManager.js).
+    # A single member needs no keyFile for internal auth - there's nothing
+    # else in the set to authenticate to.
+    command: ["--replSet", "rs0", "--bind_ip_all"]
     volumes:
       - mongo-data:/data/db
     environment:
@@ -9,18 +15,60 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in .env before running}
     # No host port mapping: only the backend service (same Docker network)
     # needs to reach Mongo. Add "27017:27017" back only for local debugging.
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # One-shot job: initiates the replica set on first run, then exits. Runs
+  # every start but is a no-op once rs0 already exists (rs.status() succeeds).
+  mongo-init:
+    image: mongo:7
+    restart: "no"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?set MONGO_ROOT_USERNAME in .env before running}
+      MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in .env before running}
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        mongosh --host mongo -u "$$MONGO_ROOT_USERNAME" -p "$$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet --eval '
+          try {
+            rs.status();
+            print("replica set already initiated");
+          } catch (e) {
+            rs.initiate({ _id: "rs0", members: [{ _id: 0, host: "mongo:27017" }] });
+            print("replica set initiated");
+          }
+        '
 
   backend:
     build: ./backend
     restart: unless-stopped
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
     environment:
-      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/agentbridge?authSource=admin
+      NODE_ENV: production
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/agentbridge?authSource=admin&replicaSet=rs0
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env before running}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      AGENT_TOKEN: ${AGENT_TOKEN:-}
       PORT: 4000
     ports:
       - "4000:4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   mongo-data:

@@ -3,6 +3,8 @@
     "name": "AgentBridge",
     "slug": "agentbridge",
     "version": "1.0.0",
+    "description": "Monitor and control paired Claude Code and Codex CLI agents from your phone.",
+    "scheme": "agentbridge",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -22,7 +24,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-status-bar"
     ]
   }
 }

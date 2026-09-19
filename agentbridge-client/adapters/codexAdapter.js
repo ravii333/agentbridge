@@ -136,7 +136,10 @@ export default {
   id: 'codex',
   label: 'Codex CLI',
   defaultBin: 'codex',
-  capabilities: { resume: 'flag', approval: 'policy', streaming: 'ndjson' },
+  // `codex exec resume` has no --sandbox option. A resumed invocation could
+  // therefore use a different policy from the one the app shows. Start a new
+  // Codex thread for each remote command until the CLI exposes that control.
+  capabilities: { resume: 'none', approval: 'policy', streaming: 'ndjson' },
   checkBinary,
   buildSpawn,
   parseLine,

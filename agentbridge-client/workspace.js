@@ -1,5 +1,4 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import config from './config.js';
 
@@ -23,17 +22,18 @@ function setWorkspace(target) {
   return currentPath;
 }
 
+// wmic was removed from modern Windows builds, so probe drive letters
+// directly instead of shelling out.
 function listWindowsDrives() {
-  try {
-    const output = execSync('wmic logicaldisk get name', { encoding: 'utf8' });
-    return output
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => /^[A-Za-z]:$/.test(line))
-      .map((drive) => ({ name: `${drive}\\`, isDirectory: true }));
-  } catch {
-    return [];
+  const drives = [];
+  for (let code = 'A'.charCodeAt(0); code <= 'Z'.charCodeAt(0); code += 1) {
+    const letter = String.fromCharCode(code);
+    const root = `${letter}:\\`;
+    if (existsSync(root)) {
+      drives.push({ name: root, isDirectory: true });
+    }
   }
+  return drives;
 }
 
 function isWindowsDriveRoot(target) {

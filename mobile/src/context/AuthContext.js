@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../utils/secureStorage.js';
 import * as authApi from '../api/authApi.js';
 
 const TOKEN_KEY = 'agentbridge_token';

@@ -131,7 +131,10 @@ function runJob({ runId, command }) {
       bin,
       cwd: workspace.getWorkspace(),
       command,
-      sessionId,
+      // `codex exec resume` does not accept a sandbox option. Do not resume
+      // an adapter unless it can keep the policy AgentBridge advertised for
+      // the new run.
+      sessionId: adapter.capabilities.resume === 'flag' ? sessionId : null,
       model: config.CLAUDE_MODEL,
       permissionMode: config.PERMISSION_MODE,
       settingsPath,
