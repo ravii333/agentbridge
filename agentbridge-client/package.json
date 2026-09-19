@@ -1,5 +1,5 @@
 {
-  "name": "agentbridge",
+  "name": "@ravii333/agentbridge",
   "version": "0.1.0",
   "description": "Pair the AI coding agent running on your PC (Claude Code, and more over time) with the AgentBridge mobile app.",
   "keywords": [

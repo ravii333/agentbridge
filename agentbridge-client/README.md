@@ -6,7 +6,7 @@ work and approve every tool call from your phone. Supports Claude Code and Codex
 ## Usage
 
 ```
-npx agentbridge
+npx @ravii333/agentbridge
 ```
 
 Wraps Claude Code by default. To run it against Codex CLI instead, put this in a `.env` file in
@@ -21,8 +21,9 @@ you're setting up, and enter the code to link this machine to your account. On f
 reuses the saved credentials (`~/.agentbridge/credentials.json`) and connects automatically.
 
 Running two agents on the same machine at once (say, one Claude Code and one Codex)? Each is a
-separate `npx agentbridge` process, in its own `.env`/directory, pairing separately in the app -
-and each needs its own `HOOK_SERVER_PORT`, since the default (8787) will conflict otherwise.
+separate `npx @ravii333/agentbridge` process, in its own `.env`/directory, pairing separately in
+the app - and each needs its own `HOOK_SERVER_PORT`, since the default (8787) will conflict
+otherwise.
 
 ## Requirements
 

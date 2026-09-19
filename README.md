@@ -19,7 +19,7 @@ Claude Code and Codex CLI, via a pluggable adapter layer that more coding CLIs c
 
 | Component | Stack |
 |---|---|
-| `agentbridge-client/` | Node.js, Socket.io client, `dotenv`; published to npm as `agentbridge` |
+| `agentbridge-client/` | Node.js, Socket.io client, `dotenv`; published to npm as `@ravii333/agentbridge` |
 | `backend/` | Node.js, Express, Socket.io, MongoDB (Mongoose), JWT (`jsonwebtoken`), `bcryptjs`, `express-rate-limit` |
 | `mobile/` | Expo / React Native, React Navigation, `expo-secure-store`, Socket.io client |
 | `frontend/` | React, Vite |
@@ -30,7 +30,7 @@ Claude Code and Codex CLI, via a pluggable adapter layer that more coding CLIs c
 - `agentbridge-client/` — runs on the machine with your coding CLI installed. Wraps the CLI
   (Claude Code or Codex CLI today, via `adapters/`), pairs with your account via a short device
   code, and relays live output/approvals over a socket to the backend. Published to npm as
-  `agentbridge`, runnable via `npx agentbridge`.
+  `@ravii333/agentbridge`, runnable via `npx @ravii333/agentbridge`.
 - `backend/` — Express + Socket.io + MongoDB relay. JWT accounts, device-code pairing, a
   multi-agent registry (several paired machines per user), and per-user scoped run history.
 - `mobile/` — the real client (Expo/React Native). Login, connect/switch agents, live feed,
@@ -54,7 +54,7 @@ Claude Code and Codex CLI, via a pluggable adapter layer that more coding CLIs c
 
    Once published, this runs via `npx` from anywhere — no checkout needed:
    ```
-   npx agentbridge
+   npx @ravii333/agentbridge
    ```
    Wraps Claude Code by default; for Codex CLI, put `AGENT_KIND=codex` in a `.env` file in
    whichever folder you run that command from first. See `agentbridge-client/README.md` for the
@@ -135,7 +135,7 @@ npm publish
 ```
 
 Before publishing, set a unique semver version in `agentbridge-client/package.json` and verify
-that the npm name `agentbridge` is available to your account. `npm pack --dry-run` confirms that
+that the npm name `@ravii333/agentbridge` is available to your account. `npm pack --dry-run` confirms that
 credentials, tests, and unrelated repository files are excluded. Users point the CLI at your
 relay with `BACKEND_URL=https://your-relay.example`; Codex users additionally set
 `AGENT_KIND=codex`.
