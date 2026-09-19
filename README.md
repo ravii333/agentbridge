@@ -116,10 +116,14 @@ Deploy the backend first, then publish the npm client and native app against its
 
 ### 1. Deploy the backend
 
-- Create production MongoDB credentials and a long, random `JWT_SECRET`.
-- Set `CORS_ORIGIN` to the comma-separated origins of any browser clients. Native Expo apps do
-  not need a browser origin.
-- Deploy `docker-compose.yml` behind HTTPS. Do not expose MongoDB publicly.
+- Create production MongoDB credentials (e.g. a free MongoDB Atlas cluster — Render has no
+  managed MongoDB) and a long, random `JWT_SECRET`.
+- Set `CORS_ORIGIN` to the comma-separated origins of any browser clients — this now includes
+  `frontend/`'s own deployed URL, since its landing page calls the relay's `/healthz` directly.
+  Native Expo apps do not need a browser origin.
+- Deploy either `docker-compose.yml` behind HTTPS yourself, or point a host like Render at
+  `backend/` directly (root directory `backend`, build `npm ci --omit=dev`, start `npm start` —
+  it already reads `PORT` from the environment). Do not expose MongoDB publicly either way.
 - Confirm `GET /healthz` reports `{ "status": "ok", "db": "up" }`.
 
 ### 2. Publish the npm client

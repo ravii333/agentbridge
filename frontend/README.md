@@ -6,7 +6,9 @@ https://agentbridge-ecru.vercel.app/.
 
 ## Stack
 
-React + Vite, plain CSS (no framework). No backend calls, no env vars — it's a static build.
+React + Vite, plain CSS (no framework). No env vars, but the deployed relay's URL is hardcoded
+in `App.jsx` (`BACKEND_URL`) — the nav's status pill does a client-side `fetch` to its `/healthz`
+on load. Update that constant if the relay ever moves.
 
 ## Develop
 
@@ -30,6 +32,9 @@ npm run serve   # preview the production build locally
 - `src/components/BrandMark.jsx` — the AgentBridge logo mark as inline SVG, reused in the nav,
   hero, and footer. Mirrors the mark in `mobile/assets/brand/`.
 - `src/components/TerminalMockup.jsx` / `PhoneMockup.jsx` — the illustrative hero mockups.
+- `useBackendStatus`/`StatusPill` in `src/App.jsx` — pings the relay's `/healthz` and renders the
+  live/offline/checking pill in the nav. Gives it up to 45s before calling it offline, since the
+  relay runs on a free Render instance that spins down when idle.
 - `src/App.css` — all styling, including the logo draw-in and live-status pulse animations.
 - `public/icon.svg` — favicon, same mark as `BrandMark` on the brand's dark background.
 

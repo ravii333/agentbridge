@@ -153,6 +153,66 @@ p {
   }
 }
 
+/* ---------- status pill ---------- */
+
+.status-pill {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.status-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.status-pill--online {
+  color: var(--success);
+  border-color: var(--success-dim);
+}
+
+.status-pill--online .status-pill-dot {
+  background: var(--success);
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+.status-pill--offline {
+  color: var(--error);
+}
+
+.status-pill--offline .status-pill-dot {
+  background: var(--error);
+}
+
+.status-pill--pending {
+  color: var(--queued);
+}
+
+.status-pill--pending .status-pill-dot {
+  background: var(--queued);
+}
+
+.download-card-status {
+  margin-bottom: 10px !important;
+}
+
+@media (max-width: 900px) {
+  .nav > .nav-inner > .status-pill {
+    display: none;
+  }
+}
+
 /* ---------- buttons ---------- */
 
 .btn {

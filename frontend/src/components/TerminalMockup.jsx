@@ -8,7 +8,7 @@ function TerminalMockup() {
         <span className="mock-titlebar-label">agentbridge-client</span>
       </div>
       <div className="mock-term-body">
-        <p><span className="mock-prompt">$</span> npx agentbridge</p>
+        <p><span className="mock-prompt">$</span> npx @ravii333/agentbridge</p>
         <p className="mock-dim">Detected: Claude Code (claude)</p>
         <p className="mock-dim">&nbsp;</p>
         <p className="mock-rule">=========================================</p>

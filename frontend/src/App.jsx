@@ -1,6 +1,11 @@
+import { useEffect, useState } from 'react';
 import TerminalMockup from './components/TerminalMockup.jsx';
 import PhoneMockup from './components/PhoneMockup.jsx';
 import BrandMark from './components/BrandMark.jsx';
+
+const BACKEND_URL = 'https://agentbridge-b5l9.onrender.com';
+const NPM_PACKAGE = '@ravii333/agentbridge';
+const NPM_URL = `https://www.npmjs.com/package/${NPM_PACKAGE}`;
 
 const AGENTS = [
   { name: 'Claude Code', status: 'available' },
@@ -41,7 +46,49 @@ const STEPS = [
   { n: '03', title: 'Work from anywhere', body: 'Send commands, approve tool calls, and watch output stream in from wherever you are.' },
 ];
 
+function useBackendStatus() {
+  const [status, setStatus] = useState('checking');
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    // The relay runs on a free Render instance that spins down when idle,
+    // so a cold request can take 30-60s to wake it - give it real headroom
+    // before calling it offline rather than flashing a false negative.
+    const timeout = setTimeout(() => controller.abort(), 45000);
+
+    fetch(`${BACKEND_URL}/healthz`, { signal: controller.signal })
+      .then((res) => {
+        if (!cancelled) setStatus(res.ok ? 'online' : 'offline');
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('offline');
+      })
+      .finally(() => clearTimeout(timeout));
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  return status;
+}
+
+function StatusPill({ status }) {
+  const label = status === 'checking' ? 'checking relay…' : status === 'online' ? 'relay live' : 'relay unreachable';
+  return (
+    <span className={`status-pill status-pill--${status}`}>
+      <span className="status-pill-dot" />
+      {label}
+    </span>
+  );
+}
+
 function App() {
+  const backendStatus = useBackendStatus();
+
   return (
     <>
       <header className="nav">
@@ -55,6 +102,7 @@ function App() {
             <a href="#download">Download</a>
             <a href="https://github.com/ravii333/agentbridge" target="_blank" rel="noreferrer">GitHub</a>
           </nav>
+          <StatusPill status={backendStatus} />
           <a href="#download" className="btn btn--solid btn--sm">Download</a>
         </div>
       </header>
@@ -132,22 +180,31 @@ function App() {
         <section id="download" className="download">
           <h2>Get AgentBridge</h2>
           <p className="download-sub">
-            Source-available today — packaged installers and an npm release are on the roadmap.
-            Clone the repo and you're running in minutes.
+            The relay is live and the CLI is published to npm — no cloning required to get
+            started. The Android app is next; until then, run the mobile client from source.
           </p>
           <div className="download-grid">
             <div className="download-card">
               <h3>AgentBridge Agent</h3>
-              <p>Runs on the machine with your coding CLI installed. Windows, macOS, and Linux.</p>
+              <p>
+                Runs on the machine with your coding CLI installed. Windows, macOS, and Linux.{' '}
+                <a href={NPM_URL} target="_blank" rel="noreferrer">Published on npm</a>.
+              </p>
               <pre className="download-snippet">
-                <code>{'git clone https://github.com/ravii333/agentbridge\ncd agentbridge/agentbridge-client\nnpm install && npm start'}</code>
+                <code>{`npx ${NPM_PACKAGE}`}</code>
               </pre>
             </div>
             <div className="download-card">
               <h3>AgentBridge Mobile</h3>
+              <p className="download-card-status">
+                <span className="status-pill status-pill--pending">
+                  <span className="status-pill-dot" />
+                  Android APK coming soon
+                </span>
+              </p>
               <p>Pair with your agent and take it with you. Runs via Expo Go today.</p>
               <pre className="download-snippet">
-                <code>{'cd agentbridge/mobile\nnpm install && npm start'}</code>
+                <code>{'git clone https://github.com/ravii333/agentbridge\ncd agentbridge/mobile\nnpm install && npm start'}</code>
               </pre>
             </div>
           </div>

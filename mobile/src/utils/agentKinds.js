@@ -8,12 +8,12 @@ const AGENT_KINDS = [
   {
     id: 'claude-code',
     label: 'Claude Code',
-    command: 'npx agentbridge',
+    command: 'npx @ravii333/agentbridge',
   },
   {
     id: 'codex',
     label: 'Codex CLI',
-    command: 'npx agentbridge',
+    command: 'npx @ravii333/agentbridge',
     envNote: 'First, create a .env file (in the folder you run this from) with AGENT_KIND=codex.',
   },
 ];
